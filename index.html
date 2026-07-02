@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quality Temp HUB</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,7 +10,7 @@
 <style>
   :root{--jet:#0E1A30;--navy:#16203F;--midnight:#223A5E;--steel:#2B7A8C;--gold:#EC8A1F;--gold-deep:#C6741A;--champagne:#E0BE73;--goldtint:#FCEBD6;--ink:#16242F;--slate:#5E6E7E;--mist:#F1F6FA;--line:#DCE4EC;--ok:#1B7A3D}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;height:100%}
+  html,body{margin:0;padding:0;height:100%;overflow-x:hidden}
   body{font-family:"Inter",Arial,sans-serif;color:var(--ink);background:var(--mist);font-size:15px;line-height:1.45}
   input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 11px;width:100%}
   input:focus,select:focus,textarea:focus{outline:3px solid rgba(236,138,31,.35);border-color:var(--gold-deep)}
@@ -21,7 +21,7 @@
   .tool:hover{border-color:var(--gold-deep);color:var(--gold-deep)}
   .tool.solid{background:var(--gold);color:var(--jet);border-color:var(--gold)}
   /* shell */
-  .shell{display:flex;min-height:100vh}
+  .shell{display:flex;min-height:100vh;min-height:100dvh}
   .side{flex:0 0 212px;background:var(--jet);color:#cfe0f0;display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:40;transition:transform .25s ease}
   .side .brand{display:flex;align-items:center;gap:10px;padding:16px 16px 12px}
   .side .brand h1{font-family:"Archivo",sans-serif;font-size:17px;letter-spacing:2px;margin:0;font-weight:900;color:#fff}
@@ -1739,8 +1739,9 @@ function exportJSON(){var b=new Blob([JSON.stringify(S,null,2)],{type:"applicati
 function importJSON(ev){var f=ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);if(!d||typeof d!=="object")throw 0;S=d;load();save("Restored.");renderAll();go(view);}catch(e){alert("That file couldn't be read as a Quality Temp HUB backup.");}};r.readAsText(f);ev.target.value="";}
 
 /* ---- splash / pin ---- */
-function enterHub(){if(S.settings.pin){document.getElementById('splash').classList.add('hide');document.getElementById('pin').classList.add('show');document.getElementById('pinInput').focus();return;}document.getElementById('splash').classList.add('hide');document.body.style.overflow="";}
-function tryPin(){var v=document.getElementById('pinInput').value;if(v===S.settings.pin){document.getElementById('pin').classList.remove('show');document.body.style.overflow="";}else{document.getElementById('pinMsg').textContent="Incorrect PIN.";}}
+function enterHub(){if(S.settings.pin){document.getElementById('splash').classList.add('hide');document.getElementById('pin').classList.add('show');document.getElementById('pinInput').focus();return;}document.getElementById('splash').classList.add('hide');document.body.style.overflow="";afterCover();}
+function afterCover(){window.scrollTo(0,0);if(CLOUD.pendingSignin){CLOUD.pendingSignin=false;go('settings');var e=document.getElementById('cl_email');if(e)setTimeout(function(){try{e.scrollIntoView({block:'center'});}catch(_){}},350);}else if(view!=='dashboard'){go('dashboard');}}
+function tryPin(){var v=document.getElementById('pinInput').value;if(v===S.settings.pin){document.getElementById('pin').classList.remove('show');document.body.style.overflow="";afterCover();}else{document.getElementById('pinMsg').textContent="Incorrect PIN.";}}
 document.addEventListener('keydown',function(e){if(e.key==="Enter"&&document.getElementById('pin').classList.contains('show'))tryPin();});
 
 /* ---- seed ---- */
@@ -1823,7 +1824,7 @@ function renderReviews(){var host=document.getElementById('revList');if(!host)re
   if(!S.reviews.length){host.innerHTML='<div class="empty">No reviews yet. Track review <b>requests</b> you send after a job and the reviews that come back \u2014 Google, Yelp, Facebook. Tap <b>\uFF0B Review request</b>.</div>';return;}
   host.innerHTML=S.reviews.map(function(r){return '<div class="card" style="border-left-color:'+(RVCOLOR[r.status]||'#5E6E7E')+'"><div class="top"><div class="nm" onclick="openReview(\''+r.id+'\')">'+esc(r.client)+'</div><span class="badge" style="background:'+(RVCOLOR[r.status]||'#5E6E7E')+'">'+esc(r.status)+'</span></div><div class="meta">'+esc(r.platform)+(r.rating?(' \u00b7 <span style="color:#EC8A1F;letter-spacing:2px">'+starStr(r.rating)+'</span>'):'')+(r.notes?('<br>'+esc(r.notes)):'')+'</div>'+(r.link?'<div class="acts"><button onclick="window.open(\''+esc(r.link)+'\',\'_blank\')">Open link</button></div>':'')+'</div>';}).join("");}
 /* ===================== CLOUD SYNC (Supabase) — slice 1: clients + bookings ===================== */
-var CLOUD={url:'',key:'',client:null,user:null,orgId:null,on:false};
+var CLOUD={url:'',key:'',client:null,user:null,orgId:null,on:false,pendingSignin:false};
 var CLOUD_CFG='qt_cloud_cfg';
 var CLOUD_DEFAULT_URL='https://gutxuwhfyhyvjwrvehbo.supabase.co';
 var CLOUD_DEFAULT_KEY='sb_publishable__sbAoUxl6_Nn34pL2wxKDw_eby7IJMh';
@@ -1840,7 +1841,7 @@ function cloudBoot(){cloudCfgLoad();var u=document.getElementById('cl_url'),k=do
   if(!CLOUD.url||!CLOUD.key){clStat('Cloud sync off \u2014 add your Supabase URL + publishable key, then sign in.');return;}
   if(!cloudCreateClient()){clStat('Couldn\u2019t start the cloud client \u2014 double-check the URL/key.');return;}
   clStat('Reconnecting\u2026');
-  CLOUD.client.auth.getSession().then(function(res){var sess=res&&res.data&&res.data.session;if(sess&&sess.user){CLOUD.user=sess.user;cloudAfterAuth();}else{clStat('Almost there \u2014 enter your email + password and tap Sign in to load your data.');try{go('settings');var e=document.getElementById('cl_email');if(e)e.scrollIntoView({block:'center'});}catch(_){}}}).catch(function(){clStat('Ready \u2014 sign in to start syncing.');});}
+  CLOUD.client.auth.getSession().then(function(res){var sess=res&&res.data&&res.data.session;if(sess&&sess.user){CLOUD.user=sess.user;cloudAfterAuth();}else{clStat('Almost there \u2014 enter your email + password and tap Sign in to load your data.');CLOUD.pendingSignin=true;}}).catch(function(){clStat('Ready \u2014 sign in to start syncing.');});}
 function cloudSignIn(){cloudReadFields();if(!window.supabase){clStat('Cloud library not loaded (needs internet).');return;}if(!CLOUD.url||!CLOUD.key){clStat('Add your Project URL and Publishable key first.');return;}if(!cloudCreateClient()){clStat('Check the URL/key \u2014 couldn\u2019t start the client.');return;}cloudCfgSave();
   var em=((document.getElementById('cl_email')||{}).value||'').trim(),pw=(document.getElementById('cl_pw')||{}).value||'';if(!em||!pw){clStat('Enter your email and password.');return;}clStat('Signing in\u2026');
   CLOUD.client.auth.signInWithPassword({email:em,password:pw}).then(function(r){if(r.error){clStat('Sign-in failed: '+esc(r.error.message));return;}CLOUD.user=r.data.user;cloudAfterAuth();}).catch(function(){clStat('Sign-in error \u2014 check your connection.');});}
