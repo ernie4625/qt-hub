@@ -41,6 +41,10 @@
   .content{padding:16px 18px 50px;max-width:1100px}
   .view{display:none}.view.on{display:block}
   .scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:35}
+  /* iOS home-screen (standalone) safe areas — keep the sidebar (Dashboard) + hamburger clear of the notch, and content clear of the home indicator */
+  .side{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left)}
+  .topbar{padding-top:calc(12px + env(safe-area-inset-top));padding-left:calc(18px + env(safe-area-inset-left));padding-right:calc(18px + env(safe-area-inset-right))}
+  .content{padding-bottom:calc(50px + env(safe-area-inset-bottom))}
   /* shared cards */
   .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
   .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 12px}
@@ -171,7 +175,7 @@
 <meta name="theme-color" content="#16203F">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="QT HUB">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
