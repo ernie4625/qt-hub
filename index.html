@@ -167,6 +167,14 @@
   @keyframes flakefall{0%{transform:translateY(-8vh) rotate(0deg);opacity:0}12%{opacity:.55}100%{transform:translateY(112vh) rotate(360deg);opacity:.12}}
   @media (prefers-reduced-motion:reduce){.cover-inner,.cover-logo,.climate{animation:none!important}.flakes{display:none}}
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16203F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QT HUB">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 </head>
 <body>
 
@@ -1813,11 +1821,13 @@ function renderReviews(){var host=document.getElementById('revList');if(!host)re
 /* ===================== CLOUD SYNC (Supabase) — slice 1: clients + bookings ===================== */
 var CLOUD={url:'',key:'',client:null,user:null,orgId:null,on:false};
 var CLOUD_CFG='qt_cloud_cfg';
+var CLOUD_DEFAULT_URL='https://gutxuwhfyhyvjwrvehbo.supabase.co';
+var CLOUD_DEFAULT_KEY='sb_publishable__sbAoUxl6_Nn34pL2wxKDw_eby7IJMh';
 function uuid4(){if(window.crypto&&crypto.randomUUID){try{return crypto.randomUUID();}catch(e){}}return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);});}
 function newId(){return CLOUD.on?uuid4():uid();}
 function cloudReady(){return !!(CLOUD.on&&CLOUD.client&&CLOUD.orgId&&CLOUD.user);}
 function cloudCfgSave(){try{localStorage.setItem(CLOUD_CFG,JSON.stringify({url:CLOUD.url,key:CLOUD.key}));}catch(e){}}
-function cloudCfgLoad(){try{var c=JSON.parse(localStorage.getItem(CLOUD_CFG));if(c){CLOUD.url=c.url||'';CLOUD.key=c.key||'';}}catch(e){}}
+function cloudCfgLoad(){try{var c=JSON.parse(localStorage.getItem(CLOUD_CFG));if(c){CLOUD.url=c.url||'';CLOUD.key=c.key||'';}}catch(e){}if(!CLOUD.url)CLOUD.url=CLOUD_DEFAULT_URL;if(!CLOUD.key)CLOUD.key=CLOUD_DEFAULT_KEY;}
 function clStat(msg,ok){var el=document.getElementById('cl_status');if(el){el.innerHTML=msg;el.style.color=ok?'var(--ok)':'var(--slate)';}var out=document.getElementById('cl_out'),row=document.getElementById('cl_syncrow');if(out)out.style.display=CLOUD.user?'inline-flex':'none';if(row)row.style.display=cloudReady()?'flex':'none';}
 function cloudCreateClient(){if(!window.supabase||!CLOUD.url||!CLOUD.key)return false;try{CLOUD.client=window.supabase.createClient(CLOUD.url,CLOUD.key);return true;}catch(e){return false;}}
 function cloudReadFields(){var u=document.getElementById('cl_url'),k=document.getElementById('cl_key');CLOUD.url=((u&&u.value)||'').trim().replace(/\/+$/,'');CLOUD.key=((k&&k.value)||'').trim();}
@@ -1826,7 +1836,7 @@ function cloudBoot(){cloudCfgLoad();var u=document.getElementById('cl_url'),k=do
   if(!CLOUD.url||!CLOUD.key){clStat('Cloud sync off \u2014 add your Supabase URL + publishable key, then sign in.');return;}
   if(!cloudCreateClient()){clStat('Couldn\u2019t start the cloud client \u2014 double-check the URL/key.');return;}
   clStat('Reconnecting\u2026');
-  CLOUD.client.auth.getSession().then(function(res){var sess=res&&res.data&&res.data.session;if(sess&&sess.user){CLOUD.user=sess.user;cloudAfterAuth();}else{clStat('Ready \u2014 enter your email + password and tap Sign in.');}}).catch(function(){clStat('Ready \u2014 sign in to start syncing.');});}
+  CLOUD.client.auth.getSession().then(function(res){var sess=res&&res.data&&res.data.session;if(sess&&sess.user){CLOUD.user=sess.user;cloudAfterAuth();}else{clStat('Almost there \u2014 enter your email + password and tap Sign in to load your data.');try{go('settings');var e=document.getElementById('cl_email');if(e)e.scrollIntoView({block:'center'});}catch(_){}}}).catch(function(){clStat('Ready \u2014 sign in to start syncing.');});}
 function cloudSignIn(){cloudReadFields();if(!window.supabase){clStat('Cloud library not loaded (needs internet).');return;}if(!CLOUD.url||!CLOUD.key){clStat('Add your Project URL and Publishable key first.');return;}if(!cloudCreateClient()){clStat('Check the URL/key \u2014 couldn\u2019t start the client.');return;}cloudCfgSave();
   var em=((document.getElementById('cl_email')||{}).value||'').trim(),pw=(document.getElementById('cl_pw')||{}).value||'';if(!em||!pw){clStat('Enter your email and password.');return;}clStat('Signing in\u2026');
   CLOUD.client.auth.signInWithPassword({email:em,password:pw}).then(function(r){if(r.error){clStat('Sign-in failed: '+esc(r.error.message));return;}CLOUD.user=r.data.user;cloudAfterAuth();}).catch(function(){clStat('Sign-in error \u2014 check your connection.');});}
