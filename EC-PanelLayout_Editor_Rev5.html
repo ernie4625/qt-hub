@@ -122,11 +122,31 @@
   .maprow select{width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px}
   .preview-note{font-size:12px;color:var(--green-d);font-weight:bold;margin-top:10px}
   .warn-note{font-size:12px;color:var(--danger);font-weight:bold;margin-top:10px}
+  /* ---- zoom control (all sizes) ---- */
+  .zoomctl{position:absolute;right:10px;bottom:34px;display:flex;flex-direction:column;gap:6px;z-index:12}
+  .zoomctl button{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.92);
+    font-size:20px;font-weight:bold;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.15);line-height:1;padding:0}
+  .zoomctl button:active{background:var(--palegreen)}
+  .zoomctl .zf{font-size:11px;font-weight:bold}
   @media (max-width:720px){
-    .sidebar{position:absolute;z-index:30;top:0;bottom:0;left:0;transform:translateX(-100%);
-      transition:transform .2s;box-shadow:2px 0 20px rgba(0,0,0,.2)}
-    .sidebar.open{transform:none}
+    header{gap:8px;padding:7px 10px}
+    .wordmark{font-size:16px}.htitle{font-size:10px}
+    #btnMenu{display:inline-block !important;margin-left:auto;font-size:16px;padding:6px 10px}
     .meta{display:none}
+    /* compact, single horizontally-scrollable toolbar row */
+    .toolbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:6px 8px;gap:5px}
+    .toolbar::-webkit-scrollbar{height:0}
+    .tb{padding:8px 10px;font-size:12px;white-space:nowrap;flex:0 0 auto}
+    .seg button{padding:8px 10px}
+    .tblabel{display:none}
+    .tbsep{flex:0 0 auto}
+    .sidebar{position:absolute;z-index:30;top:0;bottom:0;left:0;width:86%;max-width:330px;transform:translateX(-100%);
+      transition:transform .2s;box-shadow:2px 0 20px rgba(0,0,0,.3)}
+    .sidebar.open{transform:none}
+    /* guarantee a usable canvas height even inside a short embed card; let the page scroll */
+    body{overflow-y:auto}
+    main{min-height:0}
+    .canvas-wrap{min-height:74vh}
   }
 </style>
 </head>
@@ -196,6 +216,11 @@
       <canvas id="c3d"></canvas>
       <div class="readout" id="readout">—</div>
       <div class="hint3d" id="hint3d">drag = orbit · wheel = zoom</div>
+      <div class="zoomctl" id="zoomctl">
+        <button id="zoomIn" title="Zoom in">＋</button>
+        <button id="zoomOut" title="Zoom out">－</button>
+        <button id="zoomFit" class="zf" title="Fit to view">FIT</button>
+      </div>
       <div class="overlay" id="overlay"></div>
     </div>
   </section>
@@ -402,6 +427,7 @@ function computeFit(){
   vt.scale = s>0? s : 1;
   vt.ox = (W - env.w*vt.scale)/2;
   vt.oy = (H - env.h*vt.scale)/2;
+  vt.userSet = false;   // a fresh fit clears any manual zoom/pan
 }
 // world (mm, y-up from lower-left) -> screen (css px, y-down)
 function wx(x){ return vt.ox + x*vt.scale; }
@@ -950,14 +976,33 @@ function renderInspector(){
 function esc(s){return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");}
 function round(n){return Math.round((+n||0)*10)/10;}
 
-/* ===================== POINTER DRAG (2D) ===================== */
-let drag=null;
+/* ===================== POINTER: DRAG DEVICE + PAN + PINCH-ZOOM (2D) ===================== */
+let drag=null, pan=null;
+const pointers=new Map();   // pointerId -> {x,y}  (for pinch)
+let pinch=null;
+
+// zoom keeping the world point under (px,py) fixed
+function zoomAt(px,py,factor){
+  const env=faceEnvelope();
+  const worldX=sx2mm(px), Yv=(py-vt.oy)/vt.scale;   // Yv = env.h - worldY
+  vt.scale=Math.max(0.02,Math.min(8,vt.scale*factor));
+  vt.ox=px - worldX*vt.scale;
+  vt.oy=py - Yv*vt.scale;
+  vt.userSet=true; redraw();
+}
+function midDist(){
+  const a=[...pointers.values()];
+  const dx=a[0].x-a[1].x, dy=a[0].y-a[1].y;
+  return { d:Math.hypot(dx,dy), mx:(a[0].x+a[1].x)/2, my:(a[0].y+a[1].y)/2 };
+}
 c2d.addEventListener("pointerdown",e=>{
   if(view!=="2d") return;
   const rect=c2d.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  pointers.set(e.pointerId,{x:mx,y:my});
+  try{c2d.setPointerCapture(e.pointerId);}catch(_){}
+  if(pointers.size===2){ drag=null; pan=null; const m=midDist(); pinch={d0:m.d,s0:vt.scale}; return; }
   const worldX=sx2mm(mx), worldY=sy2mm(my);
-  // hit-test top-most
   const devs=facedDevices();
   let hit=null;
   for(let i=devs.length-1;i>=0;i--){
@@ -967,31 +1012,55 @@ c2d.addEventListener("pointerdown",e=>{
   if(hit){
     selectDevice(hit.id);
     drag={ id:hit.id, dx:worldX-hit.geometry.x, dy:worldY-hit.geometry.y };
-    c2d.setPointerCapture(e.pointerId);
   } else {
     selectDevice(null);
+    pan={ sx:mx, sy:my, ox:vt.ox, oy:vt.oy };   // drag empty space = pan
   }
 });
 c2d.addEventListener("pointermove",e=>{
-  if(!drag||view!=="2d") return;
+  if(view!=="2d") return;
   const rect=c2d.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-  const d=model.devices.find(x=>x.id===drag.id); if(!d) return;
-  let nx=sx2mm(mx)-drag.dx, ny=sy2mm(my)-drag.dy;
-  // grid snap
-  nx=Math.round(nx/GRID)*GRID; ny=Math.round(ny/GRID)*GRID;
-  // rail snap (din): snap Y to nearest rail on this face within 14mm
-  if(d.mount==="din"){
-    let best=null,bd=15;
-    facedRails().forEach(r=>{ if(r.orientation==="horizontal"){ const dd=Math.abs(ny-r.y); if(dd<bd){bd=dd;best=r;} }});
-    if(best){ ny=best.y; d.railId=best.id; }
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:mx,y:my});
+  if(pinch && pointers.size>=2){
+    const m=midDist();
+    const target=pinch.s0*(m.d/Math.max(pinch.d0,1));
+    zoomAt(m.mx,m.my, target/vt.scale);
+    return;
   }
-  d.geometry.x=nx; d.geometry.y=ny;
-  redraw(); renderInspector();
+  if(pan){
+    vt.ox=pan.ox+(mx-pan.sx); vt.oy=pan.oy+(my-pan.sy); vt.userSet=true; redraw(); return;
+  }
+  if(drag){
+    const d=model.devices.find(x=>x.id===drag.id); if(!d) return;
+    let nx=sx2mm(mx)-drag.dx, ny=sy2mm(my)-drag.dy;
+    nx=Math.round(nx/GRID)*GRID; ny=Math.round(ny/GRID)*GRID;
+    if(d.mount==="din"){
+      let best=null,bd=15;
+      facedRails().forEach(r=>{ if(r.orientation==="horizontal"){ const dd=Math.abs(ny-r.y); if(dd<bd){bd=dd;best=r;} }});
+      if(best){ ny=best.y; d.railId=best.id; }
+    }
+    d.geometry.x=nx; d.geometry.y=ny;
+    redraw(); renderInspector();
+  }
 });
-function endDrag(e){ if(drag){ try{c2d.releasePointerCapture(e.pointerId);}catch(_){} drag=null; refreshStatus(); } }
-c2d.addEventListener("pointerup",endDrag);
-c2d.addEventListener("pointercancel",endDrag);
+function endPtr(e){
+  pointers.delete(e.pointerId);
+  try{c2d.releasePointerCapture(e.pointerId);}catch(_){}
+  if(pointers.size<2) pinch=null;
+  if(drag){ drag=null; refreshStatus(); }
+  pan=null;
+}
+c2d.addEventListener("pointerup",endPtr);
+c2d.addEventListener("pointercancel",endPtr);
+c2d.addEventListener("wheel",e=>{ if(view!=="2d")return; e.preventDefault();
+  const rect=c2d.getBoundingClientRect();
+  zoomAt(e.clientX-rect.left, e.clientY-rect.top, e.deltaY<0?1.12:0.89);
+},{passive:false});
+// zoom buttons
+$("zoomIn").onclick=()=>zoomAt(vt.W/2,vt.H/2,1.25);
+$("zoomOut").onclick=()=>zoomAt(vt.W/2,vt.H/2,0.8);
+$("zoomFit").onclick=()=>{ if(view==="2d"){ vt.userSet=false; computeFit(); } else { cam.userScaled=false; } redraw(); };
 
 /* ===================== 3D ORBIT ===================== */
 let orbit=null;
@@ -1013,6 +1082,7 @@ function setView(v){
   c2d.style.display = v==="2d"?"block":"none";
   c3d.style.display = v==="3d"?"block":"none";
   $("hint3d").style.display = v==="3d"?"block":"none";
+  $("zoomctl").style.display = v==="2d"?"flex":"none";
   cam.userScaled=false;
   redraw();
 }
@@ -1409,7 +1479,11 @@ $("btnDraw").onclick=exportDrawings;
 $("btnAdd").onclick=addDevice;
 $("btnRotate").onclick=rotateSel;
 $("btnDelete").onclick=deleteSel;
-$("btnFit").onclick=()=>{ if(view==="2d"){computeFit();} else {cam.userScaled=false;} redraw(); };
+$("btnFit").onclick=()=>{ if(view==="2d"){vt.userSet=false;computeFit();} else {cam.userScaled=false;} redraw(); };
+// mobile: ☰ toggles the device/inspector/status sidebar
+$("btnMenu").onclick=()=>{ $("sidebar").classList.toggle("open"); };
+// tapping a device row on mobile should also close the sidebar so the canvas is visible
+document.getElementById("devList").addEventListener("click",()=>{ if(window.innerWidth<=720) $("sidebar").classList.remove("open"); });
 $("jsonCopy").onclick=()=>{ const t=$("jsonText"); t.select();
   try{ navigator.clipboard.writeText(t.value); flashToast("Copied."); }catch(_){ document.execCommand("copy"); } };
 $("jsonLoad").onclick=loadJsonModel;
@@ -1430,9 +1504,9 @@ window.addEventListener("keydown",e=>{
 });
 
 /* ===================== RESIZE / FIRST DRAW ===================== */
-const ro=new ResizeObserver(()=>{ if(view==="2d")computeFit(); redraw(); });
+const ro=new ResizeObserver(()=>{ if(view==="2d"){ vt.W=wrap.clientWidth; vt.H=wrap.clientHeight; if(!vt.userSet) computeFit(); } redraw(); });
 ro.observe(wrap);
-window.addEventListener("resize",()=>{ if(view==="2d")computeFit(); redraw(); });
+window.addEventListener("resize",()=>{ if(view==="2d"){ vt.W=wrap.clientWidth; vt.H=wrap.clientHeight; if(!vt.userSet) computeFit(); } redraw(); });
 // deferred first draw (canvas height guard)
 requestAnimationFrame(()=>{ computeFit(); loadSample(); redraw(); });
 </script>
