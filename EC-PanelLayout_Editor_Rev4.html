@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>VaCom E&C Panel Layout Editor — Rev 4</title>
+<style>
+  /* ---- VaCom brand tokens ---- */
+  :root{
+    --green:#3AAA35; --green-d:#2E8A2A; --ink:#1A1A1A; --paper:#FFFFFF;
+    --grey:#6B6B6B; --grey-l:#9A9A9A; --line:#D8D8D8; --panel:#F4F5F3;
+    --palegreen:#E6F1DD; --caution:#F4C20D; --danger:#C23B22;
+    --mono:"Courier New",Courier,monospace; --body:Arial,Helvetica,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{font-family:var(--body);color:var(--ink);background:var(--panel);
+    display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overflow:hidden}
+  button{font-family:var(--body);cursor:pointer}
+  /* ---- header ---- */
+  header{background:var(--ink);color:#fff;display:flex;align-items:center;gap:14px;
+    padding:8px 14px;flex:0 0 auto}
+  .shield{width:38px;height:38px;border:1px dashed #4a4a4a;border-radius:6px;display:flex;
+    align-items:center;justify-content:center;font-size:8px;color:#6a6a6a;text-align:center;line-height:1.1}
+  .wordmark{font-weight:bold;font-size:19px;letter-spacing:.5px}
+  .wordmark b{color:var(--green)}
+  .htitle{font-size:12px;color:#c9c9c9}
+  .htitle .dev{color:var(--caution);font-weight:bold}
+  .hspacer{flex:1}
+  .meta{font-family:var(--mono);font-size:11px;color:#bdbdbd;text-align:right;line-height:1.4}
+  .meta b{color:#fff}
+  /* ---- toolbar ---- */
+  .toolbar{background:#232323;display:flex;flex-wrap:wrap;gap:6px;padding:7px 12px;flex:0 0 auto;
+    align-items:center;border-top:1px solid #000}
+  .tb{background:#3a3a3a;color:#eee;border:1px solid #4d4d4d;border-radius:6px;font-size:12px;
+    font-weight:bold;padding:7px 11px}
+  .tb:hover{background:#474747}
+  .tb.pri{background:var(--green);color:#fff;border-color:var(--green-d)}
+  .tb.pri:hover{background:var(--green-d)}
+  .tb.warn{background:#4a3f14;color:var(--caution);border-color:#6a5a1e}
+  .tb[disabled]{opacity:.4;cursor:not-allowed}
+  .seg{display:inline-flex;border:1px solid #4d4d4d;border-radius:6px;overflow:hidden}
+  .seg button{background:#3a3a3a;color:#ccc;border:none;padding:7px 12px;font-size:12px;font-weight:bold}
+  .seg button.on{background:var(--green);color:#fff}
+  .tbsep{width:1px;height:22px;background:#4a4a4a;margin:0 3px}
+  .tblabel{color:#8f8f8f;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-left:4px}
+  /* ---- main ---- */
+  main{flex:1 1 auto;display:flex;min-height:0}
+  .sidebar{flex:0 0 300px;background:var(--paper);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;min-height:0}
+  .work{flex:1 1 auto;position:relative;min-height:0;min-width:0;background:#eceee9;
+    display:flex;flex-direction:column}
+  .canvas-wrap{flex:1 1 auto;position:relative;min-height:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+  #c3d{display:none}
+  .overlay{position:absolute;left:0;right:0;bottom:0;pointer-events:none;
+    font-family:var(--mono);font-size:11px;color:#333;padding:6px 10px;
+    background:linear-gradient(0deg,rgba(255,255,255,.85),rgba(255,255,255,0));display:flex;gap:16px;flex-wrap:wrap}
+  .readout{position:absolute;top:8px;left:10px;pointer-events:none;font-family:var(--mono);
+    font-size:11px;color:#1A1A1A;background:rgba(255,255,255,.82);padding:4px 8px;border-radius:5px;
+    border:1px solid var(--line)}
+  .hint3d{position:absolute;top:8px;right:10px;pointer-events:none;font-size:11px;color:#555;
+    background:rgba(255,255,255,.82);padding:4px 8px;border-radius:5px;border:1px solid var(--line);display:none}
+  /* ---- sidebar sections ---- */
+  .sect{border-bottom:1px solid var(--line)}
+  .sect > h3{margin:0;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);
+    background:var(--palegreen);padding:8px 12px;display:flex;align-items:center;gap:8px}
+  .sect > h3 .badge{margin-left:auto;background:var(--green);color:#fff;border-radius:10px;
+    font-size:10px;padding:1px 7px}
+  .sect > h3 .badge.warn{background:var(--caution);color:#1A1A1A}
+  .sbody{padding:10px 12px}
+  .scroll{overflow:auto;min-height:0}
+  /* device list */
+  .dev-list{list-style:none;margin:0;padding:0}
+  .dev-list li{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid #efefef;
+    font-size:12px;cursor:pointer}
+  .dev-list li:hover{background:#f6f8f4}
+  .dev-list li.sel{background:var(--palegreen);box-shadow:inset 3px 0 0 var(--green)}
+  .dev-list .swatch{width:12px;height:12px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(0,0,0,.25)}
+  .dev-list .tag{font-weight:bold;font-family:var(--mono)}
+  .dev-list .pn{color:var(--grey);font-family:var(--mono);font-size:11px}
+  .dev-list .face{margin-left:auto;font-size:10px;color:#fff;background:var(--grey-l);border-radius:4px;padding:1px 5px}
+  .dev-list .face.door{background:var(--steel,#7a6f9c)}
+  /* inspector */
+  .field{margin-bottom:8px}
+  .field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--grey);margin-bottom:3px}
+  .field input,.field select{width:100%;font-family:var(--body);font-size:13px;padding:6px 8px;
+    border:1px solid var(--line);border-radius:5px;background:#fff}
+  .field input:focus,.field select:focus{outline:2px solid rgba(58,170,53,.4);border-color:var(--green)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .nominal{font-size:11px;color:#8a6d00;background:#fdf6d8;border:1px solid #ece0a0;border-radius:5px;
+    padding:5px 8px;margin-bottom:8px}
+  .status-list{list-style:none;margin:0;padding:0;font-size:12px}
+  .status-list li{padding:6px 12px;border-bottom:1px solid #f0f0f0;display:flex;gap:8px;align-items:flex-start}
+  .status-list li .dot{width:9px;height:9px;border-radius:50%;margin-top:3px;flex:0 0 auto}
+  .status-list li.ok{color:var(--green-d)}
+  .status-list li.warn .dot{background:var(--caution)}
+  .status-list li.err .dot{background:var(--danger)}
+  .empty{color:var(--grey-l);font-size:12px;padding:10px 12px;font-style:italic}
+  /* footer */
+  footer{flex:0 0 auto;background:var(--ink);color:#9a9a9a;font-size:10.5px;letter-spacing:.4px;
+    padding:5px 14px;text-align:center;font-family:var(--mono)}
+  footer b{color:#cfcfcf}
+  /* ---- modal ---- */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;
+    justify-content:center;z-index:100;padding:16px}
+  .modal-bg.on{display:flex}
+  .modal{background:#fff;border-radius:10px;width:min(760px,100%);max-height:90vh;display:flex;
+    flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .modal h2{margin:0;font-size:15px;padding:14px 18px;background:var(--ink);color:#fff;display:flex;align-items:center;gap:10px}
+  .modal h2 .x{margin-left:auto;background:none;border:none;color:#bbb;font-size:20px;line-height:1}
+  .modal .mbody{padding:16px 18px;overflow:auto}
+  .modal textarea{width:100%;height:190px;font-family:var(--mono);font-size:12px;border:1px solid var(--line);
+    border-radius:6px;padding:10px;resize:vertical}
+  .modal .mfoot{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;background:#fafafa}
+  .help{font-size:12px;color:var(--grey);line-height:1.5;margin:0 0 10px}
+  .help code{background:#f0f0f0;padding:1px 5px;border-radius:3px;font-family:var(--mono);color:#333}
+  .maprow{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:12px;margin-top:8px}
+  .maprow label{font-size:10px;text-transform:uppercase;color:var(--grey);letter-spacing:.5px}
+  .maprow select{width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px}
+  .preview-note{font-size:12px;color:var(--green-d);font-weight:bold;margin-top:10px}
+  .warn-note{font-size:12px;color:var(--danger);font-weight:bold;margin-top:10px}
+  @media (max-width:720px){
+    .sidebar{position:absolute;z-index:30;top:0;bottom:0;left:0;transform:translateX(-100%);
+      transition:transform .2s;box-shadow:2px 0 20px rgba(0,0,0,.2)}
+    .sidebar.open{transform:none}
+    .meta{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="shield">LOGO<br>SLOT</div>
+  <div>
+    <div class="wordmark">Va<b>Com</b></div>
+  </div>
+  <div class="htitle">E&amp;C Panel Layout Editor &nbsp;<span class="dev">Rev 4 · in development</span></div>
+  <div class="hspacer"></div>
+  <div class="meta" id="metaBox">SO — · PANEL — · REV —</div>
+  <button class="tb" id="btnMenu" style="display:none">☰</button>
+</header>
+
+<div class="toolbar">
+  <button class="tb pri" id="btnBom">📋 Import BOM</button>
+  <button class="tb" id="btnAuto">⚙ Auto-arrange</button>
+  <div class="tbsep"></div>
+  <button class="tb" id="btnSample">Load Sample</button>
+  <button class="tb" id="btnImport">Import JSON</button>
+  <button class="tb" id="btnExport">Export JSON</button>
+  <button class="tb pri" id="btnDraw">🖨 Export Drawings (HTML)</button>
+  <div class="tbsep"></div>
+  <span class="tblabel">View</span>
+  <div class="seg" id="viewSeg">
+    <button data-view="2d" class="on">2D</button>
+    <button data-view="3d">3D</button>
+  </div>
+  <span class="tblabel">Face</span>
+  <div class="seg" id="faceSeg">
+    <button data-face="back" class="on">Back</button>
+    <button data-face="door">Door</button>
+  </div>
+  <div class="tbsep"></div>
+  <button class="tb" id="btnAdd">＋ Device</button>
+  <button class="tb" id="btnRotate" disabled>↻ Rotate</button>
+  <button class="tb warn" id="btnDelete" disabled>🗑 Delete</button>
+  <div class="hspacer"></div>
+  <button class="tb" id="btnFit">Fit</button>
+</div>
+
+<main>
+  <aside class="sidebar" id="sidebar">
+    <div class="sect">
+      <h3>Devices <span class="badge" id="devCount">0</span></h3>
+    </div>
+    <div class="scroll" style="flex:0 0 34%">
+      <ul class="dev-list" id="devList"></ul>
+      <div class="empty" id="devEmpty">No devices. Import a BOM or load the sample.</div>
+    </div>
+    <div class="sect"><h3>Inspector</h3></div>
+    <div class="scroll" style="flex:1 1 auto" id="inspectorWrap">
+      <div class="empty" id="inspEmpty">Select a device to edit.</div>
+      <div class="sbody" id="inspector" style="display:none"></div>
+    </div>
+    <div class="sect"><h3>Keep-out / Status <span class="badge" id="statBadge">OK</span></h3></div>
+    <div class="scroll" style="flex:0 0 24%">
+      <ul class="status-list" id="statusList"></ul>
+    </div>
+  </aside>
+
+  <section class="work">
+    <div class="canvas-wrap">
+      <canvas id="c2d"></canvas>
+      <canvas id="c3d"></canvas>
+      <div class="readout" id="readout">—</div>
+      <div class="hint3d" id="hint3d">drag = orbit · wheel = zoom</div>
+      <div class="overlay" id="overlay"></div>
+    </div>
+  </section>
+</main>
+
+<footer>INTERNAL USE ONLY // CONFIDENTIAL &nbsp;·&nbsp; VaCom Technologies (BITZER Group) &nbsp;·&nbsp; <b>E&amp;C Panel Layout Editor Rev 4</b> &nbsp;·&nbsp; dims <b>nominal — not catalog-verified</b></footer>
+
+<!-- ============ BOM IMPORT MODAL ============ -->
+<div class="modal-bg" id="bomModal">
+  <div class="modal">
+    <h2>📋 Import BOM <button class="x" data-close>×</button></h2>
+    <div class="mbody">
+      <p class="help">Paste your BOM from Excel (tab-separated) or CSV, or choose a file.
+      The first row should be a <b>header</b>. Columns are matched automatically; adjust the mapping if needed.
+      Recognized fields: <code>Tag</code> <code>PN</code> <code>Description</code> <code>Qty</code>
+      <code>Type</code> (circuit) <code>Mount</code> (din/panel) <code>Face</code> (back/door).</p>
+      <input type="file" id="bomFile" accept=".csv,.tsv,.txt" style="margin-bottom:10px">
+      <textarea id="bomText" placeholder="Tag&#9;PN&#9;Description&#9;Qty&#9;Type&#9;Mount&#9;Face&#10;-M1&#9;GV3P13&#9;Motor Circuit Breaker&#9;1&#9;power&#9;din&#9;back"></textarea>
+      <div id="mapWrap" style="display:none">
+        <div class="preview-note" id="mapSummary"></div>
+        <div class="maprow" id="mapRows"></div>
+      </div>
+      <div id="bomErr" class="warn-note" style="display:none"></div>
+    </div>
+    <div class="mfoot">
+      <button class="tb" data-close>Cancel</button>
+      <button class="tb" id="bomParse">Parse ▸</button>
+      <button class="tb pri" id="bomApply" disabled>Import &amp; Auto-arrange</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ JSON MODAL ============ -->
+<div class="modal-bg" id="jsonModal">
+  <div class="modal">
+    <h2 id="jsonTitle">JSON <button class="x" data-close>×</button></h2>
+    <div class="mbody">
+      <p class="help" id="jsonHelp"></p>
+      <textarea id="jsonText" style="height:320px"></textarea>
+      <div id="jsonErr" class="warn-note" style="display:none"></div>
+    </div>
+    <div class="mfoot">
+      <button class="tb" data-close>Close</button>
+      <button class="tb" id="jsonCopy">Copy</button>
+      <button class="tb pri" id="jsonLoad" style="display:none">Load model</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   VaCom E&C Panel Layout Editor — Rev 4
+   Single-file, zero-dependency. Datum 0,0 = lower-left of the mounting face.
+   Units mm. geometry.x/y = lower-left corner at rotation 0.
+   ========================================================================= */
+
+/* ---------- circuit-type palette (2D fill + 3D) ---------- */
+const CIRCUIT_COLORS = {
+  power:      "#3AAA35",
+  control:    "#2B6CB0",
+  motor:      "#8A5CC0",
+  protection: "#C23B22",
+  terminal:   "#B8860B",
+  comms:      "#0E9CA0",
+  hmi:        "#455A64",
+  misc:       "#7A7A7A",
+};
+function circuitColor(t){ return CIRCUIT_COLORS[(t||"misc").toLowerCase()] || CIRCUIT_COLORS.misc; }
+
+/* ---------- nominal footprint library (mm) — dimsSource:"nominal" ----------
+   Keyed by keyword found in circuitType/description/PN. w=width, h=height, d=depth. */
+const FOOTPRINTS = [
+  // keyword(s), w, h, depth, defaultCircuit, defaultMount
+  { k:["vfd","drive","altivar","atv","powerflex"], w:130, h:270, d:180, c:"motor",      m:"panel" },
+  { k:["disconnect","switch-disc","rotary","main switch"], w:90, h:130, d:110, c:"power", m:"panel" },
+  { k:["transformer","xfmr","cpt"],                w:110, h:130, d:120, c:"power",      m:"panel" },
+  { k:["plc","controller","cpu","m221","m241","clx","compactlogix"], w:120, h:100, d:75, c:"control", m:"din" },
+  { k:["i/o","io module","input module","output module"], w:35, h:100, d:75, c:"control", m:"din" },
+  { k:["power supply","psu","24vdc","abl","supply"], w:45, h:125, d:120, c:"power",     m:"din" },
+  { k:["contactor","lc1","tesys"],                 w:45,  h:85,  d:110, c:"motor",       m:"din" },
+  { k:["overload","olr","lrd","thermal relay"],    w:45,  h:60,  d:100, c:"motor",       m:"din" },
+  { k:["motor circuit","mcb-motor","gv2","gv3","manual motor"], w:45, h:110, d:100, c:"motor", m:"din" },
+  { k:["breaker","mcb","circuit breaker","c60","acti9","1p","2p","3p"], w:18, h:80, d:70, c:"protection", m:"din" },
+  { k:["fuse","fuse holder","df","holder"],        w:30,  h:90,  d:80,  c:"protection",  m:"din" },
+  { k:["relay","socket relay","rxm","ice cube"],   w:28,  h:80,  d:80,  c:"control",     m:"din" },
+  { k:["hmi","display","touchscreen","panel view","hmigxo","gto"], w:170, h:140, d:55, c:"hmi", m:"panel" },
+  { k:["pilot","push button","selector","light","indicator","e-stop","estop"], w:30, h:30, d:65, c:"hmi", m:"panel" },
+  { k:["ethernet","switch","network","com","modbus","gateway"], w:40, h:100, d:70, c:"comms", m:"din" },
+  { k:["terminal","tb","din terminal","block","grounding"], w:8, h:55, d:50, c:"terminal", m:"din" },
+  { k:["surge","spd","arrester"],                  w:36,  h:90,  d:75,  c:"protection",  m:"din" },
+];
+const FOOTPRINT_DEFAULT = { w:45, h:90, d:90, c:"misc", m:"din" };
+
+function resolveFootprint(row){
+  const hay = ((row.type||"")+" "+(row.description||"")+" "+(row.pn||"")).toLowerCase();
+  for(const fp of FOOTPRINTS){
+    if(fp.k.some(k=>hay.includes(k))) return fp;
+  }
+  return FOOTPRINT_DEFAULT;
+}
+
+/* ===================== APP STATE ===================== */
+let model = emptyModel();
+let selectedId = null;
+let view = "2d";       // "2d" | "3d"
+let face = "back";     // "back" | "door"
+const GRID = 5;        // mm snap grid
+const cam = { yaw:-0.62, pitch:0.55, scale:1, userScaled:false };
+
+function emptyModel(){
+  return {
+    schemaVersion: "1.1",
+    meta: {
+      so:"", panelId:"", rev:"", units:"mm", datum:"lower-left",
+      enclosure:{ mfg:"", pn:"", typeRating:"", width:800, height:1000, depth:300 },
+      subpanel:{ width:740, height:940 },
+      door:{ present:true, width:740, height:940 }
+    },
+    rails: [], ducts: [], devices: []
+  };
+}
+
+/* ===================== ELEMENTS ===================== */
+const $ = id => document.getElementById(id);
+const c2d = $("c2d"), ctx = c2d.getContext("2d");
+const c3d = $("c3d"), ctx3 = c3d.getContext("2d");
+const wrap = document.querySelector(".canvas-wrap");
+
+/* ===================== VIEW TRANSFORM (2D) ===================== */
+let vt = { scale:1, ox:0, oy:0, W:0, H:0 };   // world(mm)->screen(css px)
+function faceEnvelope(){
+  return face==="back"
+    ? { w:model.meta.subpanel.width, h:model.meta.subpanel.height }
+    : { w:model.meta.door.width,     h:model.meta.door.height };
+}
+function computeFit(){
+  const env = faceEnvelope();
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  vt.W=W; vt.H=H;
+  const m = 46; // margin px for dimensions
+  const s = Math.min((W-2*m)/Math.max(env.w,1), (H-2*m)/Math.max(env.h,1));
+  vt.scale = s>0? s : 1;
+  vt.ox = (W - env.w*vt.scale)/2;
+  vt.oy = (H - env.h*vt.scale)/2;
+}
+// world (mm, y-up from lower-left) -> screen (css px, y-down)
+function wx(x){ return vt.ox + x*vt.scale; }
+function wy(y){ const env=faceEnvelope(); return vt.oy + (env.h - y)*vt.scale; }
+function sx2mm(px){ return (px - vt.ox)/vt.scale; }
+function sy2mm(py){ const env=faceEnvelope(); return env.h - (py - vt.oy)/vt.scale; }
+
+/* ===================== CANVAS SIZING ===================== */
+function sizeCanvas(cv, c){
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  if(w===0||h===0) return false;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  c.setTransform(dpr,0,0,dpr,0,0);
+  return true;
+}
+function redraw(){
+  if(view==="2d"){ if(!sizeCanvas(c2d,ctx)) return; draw2D(); }
+  else { if(!sizeCanvas(c3d,ctx3)) return; draw3D(); }
+}
+
+/* ===================== 2D DRAWING ===================== */
+function devEffWH(d){
+  const g=d.geometry, r=((g.rotation||0)%360+360)%360;
+  return (r===90||r===270) ? {w:g.h,h:g.w} : {w:g.w,h:g.h};
+}
+function facedDevices(){ return model.devices.filter(d=>d.face===face); }
+function facedRails(){ return model.rails.filter(r=>r.face===face); }
+function facedDucts(){ return model.ducts.filter(z=>z.face===face); }
+
+function draw2D(){
+  const W=vt.W, H=vt.H, env=faceEnvelope();
+  ctx.clearRect(0,0,W,H);
+  if(W<=0||H<=0) return;
+  // work backdrop
+  ctx.fillStyle="#eceee9"; ctx.fillRect(0,0,W,H);
+
+  // envelope (subpanel/door)
+  ctx.fillStyle="#fbfbf9";
+  ctx.fillRect(wx(0),wy(env.h),env.w*vt.scale,env.h*vt.scale);
+  ctx.lineWidth=1.5; ctx.strokeStyle="#1A1A1A";
+  ctx.strokeRect(wx(0),wy(env.h),env.w*vt.scale,env.h*vt.scale);
+
+  // grid
+  ctx.lineWidth=1; ctx.strokeStyle="rgba(0,0,0,.05)";
+  const step=50;
+  for(let x=step;x<env.w;x+=step){ ctx.beginPath();ctx.moveTo(wx(x),wy(0));ctx.lineTo(wx(x),wy(env.h));ctx.stroke(); }
+  for(let y=step;y<env.h;y+=step){ ctx.beginPath();ctx.moveTo(wx(0),wy(y));ctx.lineTo(wx(env.w),wy(y));ctx.stroke(); }
+
+  // ducts (keep-out)
+  facedDucts().forEach(z=>{
+    ctx.fillStyle="rgba(244,194,13,.16)";
+    ctx.fillRect(wx(z.x),wy(z.y+z.h),z.w*vt.scale,z.h*vt.scale);
+    ctx.strokeStyle="#C79A00"; ctx.lineWidth=1.2; ctx.setLineDash([6,4]);
+    ctx.strokeRect(wx(z.x),wy(z.y+z.h),z.w*vt.scale,z.h*vt.scale);
+    ctx.setLineDash([]);
+    ctx.fillStyle="#8a6d00"; ctx.font="10px "+MONO;
+    ctx.fillText("DUCT "+z.id, wx(z.x)+3, wy(z.y+z.h)+12);
+  });
+
+  // rails (snap targets)
+  facedRails().forEach(r=>{
+    ctx.strokeStyle="#9aa0a6"; ctx.lineWidth=Math.max(2,7*vt.scale/8);
+    ctx.setLineDash([2,3]);
+    if(r.orientation==="vertical"){
+      ctx.beginPath();ctx.moveTo(wx(r.x),wy(r.y));ctx.lineTo(wx(r.x),wy(r.y+r.length));ctx.stroke();
+    } else {
+      ctx.beginPath();ctx.moveTo(wx(r.x),wy(r.y));ctx.lineTo(wx(r.x+r.length),wy(r.y));ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.fillStyle="#77797c"; ctx.font="9px "+MONO;
+    ctx.fillText(r.id, wx(r.x)+2, wy(r.y)-3);
+  });
+
+  // devices
+  const warnIds = keepoutViolations();
+  facedDevices().forEach(d=>{
+    const {w,h}=devEffWH(d); const g=d.geometry;
+    const px=wx(g.x), py=wy(g.y+h), pw=w*vt.scale, ph=h*vt.scale;
+    const col=circuitColor(d.circuitType);
+    ctx.fillStyle=hexA(col,.18); ctx.fillRect(px,py,pw,ph);
+    const bad=warnIds.has(d.id), selHere=d.id===selectedId;
+    ctx.lineWidth = selHere?2.5:1.4;
+    ctx.strokeStyle = bad? "#C23B22" : (selHere? "#1A1A1A" : col);
+    ctx.strokeRect(px,py,pw,ph);
+    if(bad){ // caution hatch
+      ctx.save();ctx.beginPath();ctx.rect(px,py,pw,ph);ctx.clip();
+      ctx.strokeStyle="rgba(244,194,13,.9)";ctx.lineWidth=2;
+      for(let i=-ph;i<pw;i+=8){ctx.beginPath();ctx.moveTo(px+i,py);ctx.lineTo(px+i+ph,py+ph);ctx.stroke();}
+      ctx.restore();
+      ctx.strokeStyle="#C23B22";ctx.lineWidth=1.6;ctx.strokeRect(px,py,pw,ph);
+    }
+    // label
+    if(pw>26&&ph>14){
+      ctx.fillStyle="#1A1A1A"; ctx.font="bold 11px "+BODY;
+      ctx.save();ctx.beginPath();ctx.rect(px,py,pw,ph);ctx.clip();
+      ctx.fillText(d.tag||d.id, px+4, py+13);
+      if(ph>28){ctx.fillStyle="#555";ctx.font="9px "+MONO;ctx.fillText(d.pn||"", px+4, py+24);}
+      ctx.restore();
+    }
+  });
+
+  // dimension callouts for selected device (red, referenced to datum)
+  const sel = getSelected();
+  if(sel && sel.face===face){ drawDims(sel); }
+
+  updateReadout(sel);
+}
+function drawDims(d){
+  const {w,h}=devEffWH(d), g=d.geometry, env=faceEnvelope();
+  ctx.strokeStyle="#C23B22"; ctx.fillStyle="#C23B22"; ctx.lineWidth=1; ctx.font="10px "+MONO;
+  // X from datum to left edge
+  const yb=wy(0)+16;
+  dimLine(wx(0),yb,wx(g.x),yb, Math.round(g.x)+"");
+  // width
+  dimLine(wx(g.x),wy(g.y+h)-8,wx(g.x+w),wy(g.y+h)-8, Math.round(w)+"");
+  // Y from datum
+  const xl=wx(0)-16;
+  dimLine(xl,wy(0),xl,wy(g.y), Math.round(g.y)+"", true);
+}
+function dimLine(x1,y1,x2,y2,label,vert){
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const t=4;
+  ctx.beginPath();ctx.moveTo(x1,y1-t);ctx.lineTo(x1,y1+t);ctx.moveTo(x2,y2-t);ctx.lineTo(x2,y2+t);
+  if(vert){ctx.moveTo(x1-t,y1);ctx.lineTo(x1+t,y1);ctx.moveTo(x2-t,y2);ctx.lineTo(x2+t,y2);}
+  ctx.stroke();
+  const mx=(x1+x2)/2,my=(y1+y2)/2;
+  ctx.save();ctx.fillStyle="#fff";const tw=ctx.measureText(label).width+4;
+  ctx.fillRect(mx-tw/2,my-7,tw,12);ctx.fillStyle="#C23B22";
+  ctx.textAlign="center";ctx.fillText(label,mx,my+3);ctx.restore();ctx.textAlign="left";
+}
+const BODY='Arial,Helvetica,sans-serif', MONO='"Courier New",monospace';
+function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+
+function updateReadout(sel){
+  const env=faceEnvelope();
+  let s = `${face.toUpperCase()} · ${env.w}×${env.h} mm · datum ⌐ lower-left`;
+  if(sel) s += `  |  ${sel.tag||sel.id} @ (${Math.round(sel.geometry.x)}, ${Math.round(sel.geometry.y)})  rot ${sel.geometry.rotation||0}°`;
+  $("readout").textContent = s;
+}
+
+/* ===================== 3D DRAWING (orthographic painter's) ===================== */
+function draw3D(){
+  const W=wrap.clientWidth, H=wrap.clientHeight;
+  ctx3.clearRect(0,0,W,H);
+  if(W<=0||H<=0) return;
+  ctx3.fillStyle="#dfe3dd"; ctx3.fillRect(0,0,W,H);
+  const env=faceEnvelope();
+  // camera basis
+  const cy=Math.cos(cam.yaw), sy=Math.sin(cam.yaw), cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch);
+  function proj(x,y,z){
+    // center world
+    const X=x-env.w/2, Y=y-env.h/2, Z=z;
+    // yaw about vertical (Y), then pitch
+    let px = X*cy + Z*sy;
+    let pz = -X*sy + Z*cy;
+    let py = Y*cp - pz*sp;
+    return { sx:px, sy:-py };  // screen coords pre-scale (y up)
+  }
+  // auto-fit scale
+  if(!cam.userScaled){
+    const pts=[];
+    [[0,0,0],[env.w,0,0],[0,env.h,0],[env.w,env.h,0],
+     [0,0,-model.meta.enclosure.depth],[env.w,env.h,-model.meta.enclosure.depth]].forEach(p=>pts.push(proj(...p)));
+    let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+    pts.forEach(p=>{minX=Math.min(minX,p.sx);maxX=Math.max(maxX,p.sx);minY=Math.min(minY,p.sy);maxY=Math.max(maxY,p.sy);});
+    const sc=Math.min((W-90)/Math.max(maxX-minX,1),(H-90)/Math.max(maxY-minY,1));
+    cam.scale = sc>0?sc:0.5;
+  }
+  const cx=W/2, ccy=H/2;
+  const T=p=>({x:cx+p.sx*cam.scale, y:ccy+p.sy*cam.scale});
+
+  const faces=[]; // {pts:[{x,y}], z, fill, stroke, label}
+  function pushQuad(a,b,c,d,fill,stroke,z,label){
+    faces.push({pts:[T(a),T(b),T(c),T(d)],z,fill,stroke,label});
+  }
+  // subpanel plane (z=0) as back plate
+  pushQuad(proj(0,0,0),proj(env.w,0,0),proj(env.w,env.h,0),proj(0,env.h,0),
+           "#cfd4cc","#9aa0a6", 1e6);
+
+  // rails as thin raised bars
+  facedRails().forEach(r=>{
+    const railD=12, rw=(r.orientation==="vertical")?10:r.length, rh=(r.orientation==="vertical")?r.length:10;
+    boxFaces(r.x, r.y, railD, rw, rh, "#b8bdb4","#8f948b", pushQuad, proj);
+  });
+
+  // devices, extruded by depth
+  facedDevices().forEach(d=>{
+    const {w,h}=devEffWH(d), g=d.geometry;
+    const col=circuitColor(d.circuitType);
+    boxFaces(g.x, g.y, g.depth||60, w, h, col, "#1A1A1A", pushQuad, proj, d.tag);
+  });
+
+  // painter's: far first (larger z drawn first)
+  faces.sort((a,b)=>b.z-a.z);
+  faces.forEach(f=>{
+    ctx3.beginPath();ctx3.moveTo(f.pts[0].x,f.pts[0].y);
+    for(let i=1;i<f.pts.length;i++)ctx3.lineTo(f.pts[i].x,f.pts[i].y);
+    ctx3.closePath();
+    ctx3.fillStyle=f.fill;ctx3.fill();
+    ctx3.lineWidth=1;ctx3.strokeStyle=f.stroke;ctx3.stroke();
+    if(f.label){
+      const cxl=(f.pts[0].x+f.pts[2].x)/2, cyl=(f.pts[0].y+f.pts[2].y)/2;
+      ctx3.fillStyle="#fff";ctx3.font="bold 10px "+BODY;ctx3.textAlign="center";
+      ctx3.fillText(f.label,cxl,cyl+3);ctx3.textAlign="left";
+    }
+  });
+}
+// build box faces for a component at world x,y extruded from z=0 to z=depth off the plate.
+// The front (z=depth) face carries the label. zk sort key uses -depth so nearer boxes draw later.
+function boxFaces(x,y,depth,w,h,fill,stroke,push,proj,label){
+  const z1=depth, p=(X,Y,Z)=>proj(X,Y,Z);
+  const A=p(x,y,0),B=p(x+w,y,0),C=p(x+w,y+h,0),D=p(x,y+h,0);
+  const A2=p(x,y,z1),B2=p(x+w,y,z1),C2=p(x+w,y+h,z1),D2=p(x,y+h,z1);
+  const zk=-z1; // faces with more extrusion draw later (nearer front)
+  push(A,B,B2,A2,shade(fill,.82),stroke, zk+3);   // bottom
+  push(A,D,D2,A2,shade(fill,.72),stroke, zk+2);   // left
+  push(B,C,C2,B2,shade(fill,.72),stroke, zk+2);   // right
+  push(D,C,C2,D2,shade(fill,.90),stroke, zk+1);   // top
+  push(A2,B2,C2,D2,shade(fill,1),stroke, zk-1, label); // front (carries label)
+}
+function shade(hex,f){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  r=Math.round(r*f+(1-f)*80); g=Math.round(g*f); b=Math.round(b*f);
+  return `rgb(${Math.min(255,r)},${Math.min(255,g)},${Math.min(255,b)})`;
+}
+
+/* ===================== KEEP-OUT / OVERLAP GUARD ===================== */
+function rectOf(d){ const {w,h}=devEffWH(d),g=d.geometry; return {x:g.x,y:g.y,w,h,cl:d.clearanceMm||0}; }
+function overlaps(a,b,pad){pad=pad||0;
+  return a.x < b.x+b.w+pad && a.x+a.w+pad > b.x && a.y < b.y+b.h+pad && a.y+a.h+pad > b.y;}
+function keepoutViolations(){
+  const bad=new Set(), devs=facedDevices();
+  for(let i=0;i<devs.length;i++){
+    const ra=rectOf(devs[i]);
+    for(let j=i+1;j<devs.length;j++){
+      const rb=rectOf(devs[j]);
+      if(overlaps(ra,rb,Math.max(ra.cl,rb.cl))){ bad.add(devs[i].id); bad.add(devs[j].id); }
+    }
+    for(const z of facedDucts()){
+      if(overlaps(ra,z,ra.cl)){ bad.add(devs[i].id); }
+    }
+    // envelope bounds
+    const env=faceEnvelope();
+    if(ra.x<0||ra.y<0||ra.x+ra.w>env.w||ra.y+ra.h>env.h) bad.add(devs[i].id);
+  }
+  return bad;
+}
+function refreshStatus(){
+  const bad=keepoutViolations(), list=$("statusList"); list.innerHTML="";
+  const badge=$("statBadge");
+  if(bad.size===0){
+    list.innerHTML='<li class="ok"><span class="dot" style="background:#3AAA35"></span>No overlaps or keep-out violations on either face.</li>';
+    badge.textContent="OK"; badge.className="badge";
+  } else {
+    const env=faceEnvelope();
+    model.devices.forEach(d=>{
+      if(!bad.has(d.id)) return;
+      const {w,h}=devEffWH(d),g=d.geometry;
+      let why="overlap / clearance conflict";
+      if(g.x<0||g.y<0||g.x+w>(d.face==="back"?model.meta.subpanel.width:model.meta.door.width)||
+         g.y+h>(d.face==="back"?model.meta.subpanel.height:model.meta.door.height)) why="outside envelope";
+      const li=document.createElement("li");li.className="warn";
+      li.innerHTML=`<span class="dot"></span><span><b>${d.tag||d.id}</b> (${d.face}) — ${why}</span>`;
+      li.onclick=()=>{ if(d.face!==face) setFace(d.face); selectDevice(d.id); };
+      list.appendChild(li);
+    });
+    badge.textContent=bad.size+" ⚠"; badge.className="badge warn";
+  }
+}
+
+/* ===================== AUTO-ARRANGE ===================== */
+function autoArrange(){
+  ensureRails();
+  const CL=15;         // gap between parts (mm)
+  const MARGIN=25;     // edge margin
+  ["back","door"].forEach(f=>{
+    const env = f==="back"?model.meta.subpanel:model.meta.door;
+    const rails = model.rails.filter(r=>r.face===f && r.orientation==="horizontal")
+                             .sort((a,b)=>b.y-a.y);   // top rail first
+    // DIN-mount devices packed on rails
+    const din = model.devices.filter(d=>d.face===f && d.mount==="din");
+    let ri=0, cursorX = rails.length? rails[0].x : MARGIN;
+    let railY = rails.length? rails[0].y : env.height-120;
+    const railStripH = {};   // tallest DIN device height parked on each rail
+    din.forEach(d=>{
+      const {w,h}=devEffWH(d);
+      let rail = rails[ri];
+      if(rail){
+        if(cursorX + w > rail.x + rail.length){   // wrap to next rail
+          ri++; rail=rails[ri];
+          if(rail){ cursorX=rail.x; railY=rail.y; }
+        }
+      }
+      if(rail){
+        d.geometry.x = cursorX;
+        d.geometry.y = rail.y;               // sit device with lower-left on rail line
+        d.railId = rail.id;
+        cursorX += w + CL;
+        railStripH[rail.id]=Math.max(railStripH[rail.id]||0, h);
+      } else {
+        // no rail room: fall back to free grid at bottom
+        d.geometry.x = MARGIN; d.geometry.y = MARGIN;
+      }
+    });
+    // PANEL-mount devices: pack into the open bays BETWEEN rail strips (largest bay first),
+    // shelf-packing left->right and wrapping upward within each bay; skip past ducts.
+    const panel = model.devices.filter(d=>d.face===f && d.mount==="panel")
+                               .sort((a,b)=>devEffWH(b).h-devEffWH(a).h); // tallest first
+    const bays = openBays(f, env, rails, railStripH, MARGIN);
+    const ducts = model.ducts.filter(z=>z.face===f);
+    let bi=0, bx=MARGIN, by=(bays[0]?bays[0].y0:MARGIN), shelfH=0;
+    panel.forEach(d=>{
+      const {w,h}=devEffWH(d);
+      let placed=false, guard=0;
+      while(!placed && guard++<bays.length+2){
+        const bay=bays[bi];
+        if(!bay){ // no bay left: drop at bottom-left, guard will flag
+          d.geometry.x=MARGIN; d.geometry.y=MARGIN; d.railId=null; placed=true; break;
+        }
+        // new column if width exceeded
+        if(bx+w > env.width-MARGIN){ bx=MARGIN; by += shelfH+CL; shelfH=0; }
+        // hop over any duct band that this shelf would straddle
+        for(const z of ducts){ if(by < z.y+z.h && by+h > z.y){ by = z.y+z.h+CL; } }
+        // fits vertically in this bay?
+        if(by+h <= bay.y1){
+          d.geometry.x=bx; d.geometry.y=by; d.railId=null;
+          bx += w+CL; shelfH=Math.max(shelfH,h); placed=true;
+        } else { // advance to next bay
+          bi++; const nb=bays[bi]; bx=MARGIN; by=nb?nb.y0:MARGIN; shelfH=0;
+        }
+      }
+    });
+    resolveDuctCollisions(f);
+  });
+  selectedId=null;
+  refreshAll();
+  flashToast("Auto-arranged "+model.devices.length+" device(s).");
+}
+// Open horizontal bands (y-up) not occupied by a rail's DIN-device strip — sorted largest-first,
+// so the tallest panel-mount gear claims the biggest clear bay.
+function openBays(f, env, rails, railStripH, MARGIN){
+  const strips = rails.map(r=>({bot:r.y, top:r.y + (railStripH[r.id]||115)}))
+                      .sort((a,b)=>a.bot-b.bot);
+  const bays=[]; let prevTop=MARGIN;
+  strips.forEach(s=>{
+    if(s.bot - prevTop > 60) bays.push({y0:prevTop, y1:s.bot - 8});
+    prevTop=Math.max(prevTop, s.top);
+  });
+  if((env.height-MARGIN) - prevTop > 60) bays.push({y0:prevTop, y1:env.height-MARGIN});
+  if(bays.length===0) bays.push({y0:MARGIN, y1:env.height-MARGIN}); // no rails: whole face
+  return bays.sort((a,b)=>(b.y1-b.y0)-(a.y1-a.y0));
+}
+function resolveDuctCollisions(f){
+  const ducts=model.ducts.filter(z=>z.face===f);
+  const env=f==="back"?model.meta.subpanel:model.meta.door;
+  model.devices.filter(d=>d.face===f).forEach(d=>{
+    let guard=0;
+    while(guard++<40){
+      const r=rectOf(d); let hit=false;
+      for(const z of ducts){ if(overlaps(r,z,5)){ d.geometry.y = z.y - (rectOf(d).h) - 8; hit=true; break; } }
+      if(d.geometry.y<0){ d.geometry.y=env.height-rectOf(d).h-8; }
+      if(!hit) break;
+    }
+  });
+}
+function ensureRails(){
+  // If the model has no rails, lay out standard horizontal DIN rails across the UPPER portion of
+  // the back subpanel, leaving a large open bay in the lower ~42% for tall panel-mount gear (VFDs,
+  // disconnects, transformers). Rail count adapts to how many DIN devices need parking.
+  if(model.rails.length) return;
+  const env=model.meta.subpanel;
+  const dinCount=model.devices.filter(d=>d.face==="back"&&d.mount==="din").length;
+  const anyTallPanel=model.devices.some(d=>d.face==="back"&&d.mount==="panel"&&devEffWH(d).h>180);
+  const bottomReserve = anyTallPanel ? env.height*0.42 : env.height*0.15;
+  // estimate rows needed (rough: ~14 small parts per rail), clamp 2..6
+  let need=Math.max(2, Math.min(6, Math.ceil(dinCount/14)));
+  let y=env.height-110, i=0;
+  while(i<need && y>bottomReserve){
+    model.rails.push({ id:"DR"+(i+1), face:"back", type:"din", orientation:"horizontal",
+      x:25, y:y, length:env.width-50 });
+    y-=210; i++;
+  }
+}
+
+/* ===================== BOM PARSING ===================== */
+let bomParsed=null, bomHeaders=[], bomRows=[];
+const FIELD_KEYS = {
+  tag:["tag","item","itemtag","ref","refdes","designator","device tag","name"],
+  pn:["pn","part","part number","part no","partno","catalog","catalog number","cat no","mfg pn","mpn","stock"],
+  description:["description","desc","descr","details","nomenclature"],
+  qty:["qty","quantity","q'ty","count"],
+  type:["type","circuit","circuittype","circuit type","category","cat","function"],
+  mount:["mount","mounting","mount type"],
+  face:["face","location","side"],
+};
+function splitLine(line, delim){
+  // basic CSV/TSV with quotes
+  const out=[]; let cur="", q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else { if(ch==='"') q=true; else if(ch===delim){out.push(cur);cur="";} else cur+=ch; }
+  }
+  out.push(cur); return out.map(s=>s.trim());
+}
+function detectDelim(text){
+  const first=text.split(/\r?\n/)[0]||"";
+  const t=(first.match(/\t/g)||[]).length, c=(first.match(/,/g)||[]).length, s=(first.match(/;/g)||[]).length;
+  if(t>=c&&t>=s&&t>0) return "\t";
+  if(s>c&&s>0) return ";";
+  return ",";
+}
+function parseBOM(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim().length);
+  if(lines.length<1) throw new Error("No rows found.");
+  const delim=detectDelim(text);
+  bomHeaders=splitLine(lines[0],delim);
+  bomRows=lines.slice(1).map(l=>splitLine(l,delim));
+  return autoMap();
+}
+function autoMap(){
+  const map={};
+  const lowHeaders=bomHeaders.map(h=>h.toLowerCase().trim());
+  for(const field in FIELD_KEYS){
+    let idx=-1;
+    for(const key of FIELD_KEYS[field]){
+      idx=lowHeaders.findIndex(h=>h===key);
+      if(idx<0) idx=lowHeaders.findIndex(h=>h.includes(key));
+      if(idx>=0) break;
+    }
+    map[field]=idx;
+  }
+  return map;
+}
+function buildDevicesFromBOM(map){
+  const devs=[]; let seq=1;
+  bomRows.forEach(cols=>{
+    const get=f=> (map[f]>=0 && cols[map[f]]!=null)? cols[map[f]].trim() : "";
+    const pn=get("pn"), desc=get("description"), tagBase=get("tag");
+    if(!pn && !desc && !tagBase) return; // skip blank
+    let qty=parseInt(get("qty"),10); if(!qty||qty<1) qty=1;
+    const rawType=get("type").toLowerCase();
+    const rawMount=get("mount").toLowerCase();
+    const rawFace=get("face").toLowerCase();
+    for(let q=0;q<qty;q++){
+      const fp=resolveFootprint({type:rawType,description:desc,pn});
+      const circuit = normalizeCircuit(rawType) || fp.c;
+      const mount = (rawMount.includes("panel")?"panel":rawMount.includes("din")?"din":fp.m);
+      const face = (rawFace.includes("door")?"door":"back");
+      const tag = qty>1 ? `${tagBase||("-D"+seq)}-${q+1}` : (tagBase||("-D"+seq));
+      devs.push({
+        id:"d"+(seq++),
+        tag, pn, description:desc||pn||"(unnamed)",
+        circuitType:circuit, face, mount, railId:null,
+        geometry:{ x:25, y:25, w:fp.w, h:fp.h, depth:fp.d, rotation:0 },
+        dimsSource:"nominal", clearanceMm:10, nameplate:tag
+      });
+    }
+  });
+  return devs;
+}
+function normalizeCircuit(t){
+  if(!t) return null;
+  if(/pow|main|feed|dist/.test(t)) return "power";
+  if(/mot|vfd|drive|contact|overload/.test(t)) return "motor";
+  if(/prot|breaker|fuse|surge|spd/.test(t)) return "protection";
+  if(/ctrl|control|plc|relay|logic/.test(t)) return "control";
+  if(/term|ground/.test(t)) return "terminal";
+  if(/comm|net|eth|modbus/.test(t)) return "comms";
+  if(/hmi|pilot|button|light|display/.test(t)) return "hmi";
+  return null;
+}
+
+/* ===================== SELECTION / INSPECTOR ===================== */
+function getSelected(){ return model.devices.find(d=>d.id===selectedId)||null; }
+function selectDevice(id){ selectedId=id; renderDevList(); renderInspector(); redraw();
+  $("btnRotate").disabled=$("btnDelete").disabled=!id; }
+function renderDevList(){
+  const ul=$("devList"); ul.innerHTML="";
+  const devs=model.devices;
+  $("devCount").textContent=devs.length;
+  $("devEmpty").style.display=devs.length?"none":"block";
+  devs.forEach(d=>{
+    const li=document.createElement("li");
+    if(d.id===selectedId) li.className="sel";
+    li.innerHTML=`<span class="swatch" style="background:${circuitColor(d.circuitType)}"></span>
+      <span class="tag">${d.tag||d.id}</span>
+      <span class="pn">${d.pn||""}</span>
+      <span class="face ${d.face}">${d.face}</span>`;
+    li.onclick=()=>{ if(d.face!==face) setFace(d.face); selectDevice(d.id); };
+    ul.appendChild(li);
+  });
+}
+function renderInspector(){
+  const d=getSelected();
+  $("inspEmpty").style.display=d?"none":"block";
+  const box=$("inspector"); box.style.display=d?"block":"none";
+  if(!d) return;
+  const opt=(list,val)=>list.map(o=>`<option ${o===val?"selected":""}>${o}</option>`).join("");
+  box.innerHTML=`
+    ${d.dimsSource==="nominal"?'<div class="nominal">⚠ Dimensions are <b>nominal placeholders</b> — not catalog-verified.</div>':''}
+    <div class="grid2">
+      <div class="field"><label>Tag</label><input id="f_tag" value="${esc(d.tag)}"></div>
+      <div class="field"><label>PN</label><input id="f_pn" value="${esc(d.pn)}"></div>
+    </div>
+    <div class="field"><label>Description</label><input id="f_desc" value="${esc(d.description)}"></div>
+    <div class="grid2">
+      <div class="field"><label>Circuit type</label><select id="f_ct">${opt(Object.keys(CIRCUIT_COLORS),d.circuitType)}</select></div>
+      <div class="field"><label>Nameplate</label><input id="f_np" value="${esc(d.nameplate||'')}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Face</label><select id="f_face">${opt(["back","door"],d.face)}</select></div>
+      <div class="field"><label>Mount</label><select id="f_mount">${opt(["din","panel"],d.mount)}</select></div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>X (mm)</label><input id="f_x" type="number" value="${round(d.geometry.x)}"></div>
+      <div class="field"><label>Y (mm)</label><input id="f_y" type="number" value="${round(d.geometry.y)}"></div>
+      <div class="field"><label>Rot °</label><select id="f_rot">${opt(["0","90","180","270"],String(d.geometry.rotation||0))}</select></div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>W (mm)</label><input id="f_w" type="number" value="${round(d.geometry.w)}"></div>
+      <div class="field"><label>H (mm)</label><input id="f_h" type="number" value="${round(d.geometry.h)}"></div>
+      <div class="field"><label>Depth</label><input id="f_d" type="number" value="${round(d.geometry.depth)}"></div>
+    </div>
+    <div class="field"><label>Clearance (mm)</label><input id="f_cl" type="number" value="${round(d.clearanceMm||0)}"></div>
+  `;
+  const bind=(id,fn)=>{const el=$(id); if(el) el.oninput=()=>{fn(el.value); dirtyDims(); };};
+  bind("f_tag",v=>d.tag=v); bind("f_pn",v=>d.pn=v); bind("f_desc",v=>d.description=v);
+  bind("f_np",v=>d.nameplate=v);
+  bind("f_ct",v=>d.circuitType=v);
+  bind("f_face",v=>{d.face=v;});
+  bind("f_mount",v=>d.mount=v);
+  bind("f_x",v=>d.geometry.x=+v||0); bind("f_y",v=>d.geometry.y=+v||0);
+  bind("f_w",v=>{d.geometry.w=+v||1;}); bind("f_h",v=>{d.geometry.h=+v||1;});
+  bind("f_d",v=>d.geometry.depth=+v||1);
+  bind("f_rot",v=>d.geometry.rotation=+v||0);
+  bind("f_cl",v=>d.clearanceMm=+v||0);
+  function dirtyDims(){ if(d.dimsSource==="nominal"){/*stays nominal unless user changes w/h*/} refreshAll(); }
+}
+function esc(s){return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");}
+function round(n){return Math.round((+n||0)*10)/10;}
+
+/* ===================== POINTER DRAG (2D) ===================== */
+let drag=null;
+c2d.addEventListener("pointerdown",e=>{
+  if(view!=="2d") return;
+  const rect=c2d.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const worldX=sx2mm(mx), worldY=sy2mm(my);
+  // hit-test top-most
+  const devs=facedDevices();
+  let hit=null;
+  for(let i=devs.length-1;i>=0;i--){
+    const d=devs[i], r=rectOf(d);
+    if(worldX>=r.x&&worldX<=r.x+r.w&&worldY>=r.y&&worldY<=r.y+r.h){ hit=d; break; }
+  }
+  if(hit){
+    selectDevice(hit.id);
+    drag={ id:hit.id, dx:worldX-hit.geometry.x, dy:worldY-hit.geometry.y };
+    c2d.setPointerCapture(e.pointerId);
+  } else {
+    selectDevice(null);
+  }
+});
+c2d.addEventListener("pointermove",e=>{
+  if(!drag||view!=="2d") return;
+  const rect=c2d.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const d=model.devices.find(x=>x.id===drag.id); if(!d) return;
+  let nx=sx2mm(mx)-drag.dx, ny=sy2mm(my)-drag.dy;
+  // grid snap
+  nx=Math.round(nx/GRID)*GRID; ny=Math.round(ny/GRID)*GRID;
+  // rail snap (din): snap Y to nearest rail on this face within 14mm
+  if(d.mount==="din"){
+    let best=null,bd=15;
+    facedRails().forEach(r=>{ if(r.orientation==="horizontal"){ const dd=Math.abs(ny-r.y); if(dd<bd){bd=dd;best=r;} }});
+    if(best){ ny=best.y; d.railId=best.id; }
+  }
+  d.geometry.x=nx; d.geometry.y=ny;
+  redraw(); renderInspector();
+});
+function endDrag(e){ if(drag){ try{c2d.releasePointerCapture(e.pointerId);}catch(_){} drag=null; refreshStatus(); } }
+c2d.addEventListener("pointerup",endDrag);
+c2d.addEventListener("pointercancel",endDrag);
+
+/* ===================== 3D ORBIT ===================== */
+let orbit=null;
+c3d.addEventListener("pointerdown",e=>{ if(view!=="3d")return; orbit={x:e.clientX,y:e.clientY,yaw:cam.yaw,pitch:cam.pitch}; c3d.setPointerCapture(e.pointerId); });
+c3d.addEventListener("pointermove",e=>{ if(!orbit)return;
+  cam.yaw=orbit.yaw+(e.clientX-orbit.x)*0.01;
+  cam.pitch=Math.max(-1.4,Math.min(1.4,orbit.pitch+(e.clientY-orbit.y)*0.008));
+  draw3D(); });
+c3d.addEventListener("pointerup",e=>{ if(orbit){try{c3d.releasePointerCapture(e.pointerId);}catch(_){}} orbit=null; });
+c3d.addEventListener("pointercancel",()=>orbit=null);
+c3d.addEventListener("wheel",e=>{ if(view!=="3d")return; e.preventDefault();
+  cam.userScaled=true; cam.scale*=(e.deltaY<0?1.1:0.9); cam.scale=Math.max(0.05,Math.min(20,cam.scale)); draw3D();
+},{passive:false});
+
+/* ===================== VIEW / FACE TOGGLE ===================== */
+function setView(v){
+  view=v;
+  document.querySelectorAll("#viewSeg button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));
+  c2d.style.display = v==="2d"?"block":"none";
+  c3d.style.display = v==="3d"?"block":"none";
+  $("hint3d").style.display = v==="3d"?"block":"none";
+  cam.userScaled=false;
+  redraw();
+}
+function setFace(f){
+  face=f;
+  document.querySelectorAll("#faceSeg button").forEach(b=>b.classList.toggle("on",b.dataset.face===f));
+  computeFit(); cam.userScaled=false; redraw(); refreshStatus();
+}
+
+/* ===================== ADD / ROTATE / DELETE ===================== */
+function addDevice(){
+  const n=model.devices.length+1;
+  const d={ id:"d"+Date.now().toString(36), tag:"-D"+n, pn:"", description:"New device",
+    circuitType:"misc", face, mount:"din", railId:null,
+    geometry:{x:40,y:faceEnvelope().h-140,w:45,h:90,depth:80,rotation:0},
+    dimsSource:"nominal", clearanceMm:10, nameplate:"-D"+n };
+  model.devices.push(d); selectDevice(d.id); refreshAll();
+}
+function rotateSel(){ const d=getSelected(); if(!d)return; d.geometry.rotation=((d.geometry.rotation||0)+90)%360; refreshAll(); }
+function deleteSel(){ const d=getSelected(); if(!d)return;
+  model.devices=model.devices.filter(x=>x.id!==d.id); selectDevice(null); refreshAll(); }
+
+/* ===================== REFRESH ===================== */
+function refreshAll(){ renderDevList(); renderInspector(); refreshStatus(); updateMeta(); redraw(); }
+function updateMeta(){
+  const m=model.meta;
+  $("metaBox").innerHTML=`SO <b>${m.so||"—"}</b> · PANEL <b>${m.panelId||"—"}</b> · REV <b>${m.rev||"—"}</b>`;
+}
+
+/* ===================== TOAST ===================== */
+let toastT=null;
+function flashToast(msg){
+  let t=$("_toast"); if(!t){ t=document.createElement("div"); t.id="_toast";
+    t.style.cssText="position:fixed;bottom:34px;left:50%;transform:translateX(-50%);background:#1A1A1A;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.3)";
+    document.body.appendChild(t);}
+  t.textContent=msg; t.style.opacity="1";
+  clearTimeout(toastT); toastT=setTimeout(()=>t.style.opacity="0",2200);
+  t.style.transition="opacity .4s";
+}
+
+/* ===================== SAMPLE MODEL ===================== */
+function loadSample(){
+  model=emptyModel();
+  model.meta.so="SO-24817"; model.meta.panelId="CP-01"; model.meta.rev="A";
+  model.meta.enclosure={mfg:"Hoffman",pn:"A48H3612LP",typeRating:"Type 12",width:900,height:1200,depth:300};
+  model.meta.subpanel={width:820,height:1120};
+  model.meta.door={present:true,width:820,height:1120};
+  // rails
+  model.rails=[
+    {id:"DR1",face:"back",type:"din",orientation:"horizontal",x:40,y:980,length:740},
+    {id:"DR2",face:"back",type:"din",orientation:"horizontal",x:40,y:740,length:740},
+    {id:"DR3",face:"back",type:"din",orientation:"horizontal",x:40,y:250,length:740},
+  ];
+  // wire duct (keep-out) between rails
+  model.ducts=[
+    {id:"WD1",face:"back",x:40,y:900,w:740,h:50,depth:60},
+    {id:"WD2",face:"back",x:40,y:660,w:740,h:50,depth:60},
+    {id:"WD3",face:"back",x:40,y:170,w:740,h:50,depth:60},
+  ];
+  // BOM-like devices
+  const bom=[
+    ["-QM","GV3P13","Main Disconnect",1,"power","panel","back"],
+    ["-CB1","C60N-C16",  "Branch Breaker 16A",4,"protection","din","back"],
+    ["-K","LC1D18",    "Contactor 18A",3,"motor","din","back"],
+    ["-OL","LRD21",     "Overload Relay",3,"motor","din","back"],
+    ["-PS","ABL8RPS24100","24VDC Power Supply",1,"power","din","back"],
+    ["-PLC","TM241CE24T","PLC Controller",1,"control","din","back"],
+    ["-VFD","ATV320U15N4","VFD 1.5kW",2,"motor","panel","back"],
+    ["-TB","NSYTRV22",  "Terminal Block",24,"terminal","din","back"],
+    ["-HMI","HMIGXO3502","HMI Display 3.5\"",1,"hmi","panel","door"],
+    ["-PB","XB4BA31",   "Push Button Start",2,"hmi","panel","door"],
+    ["-PL","XB4BVB3",   "Pilot Light Run",3,"hmi","panel","door"],
+    ["-ES","XB4BS8445", "E-Stop",1,"hmi","panel","door"],
+  ];
+  let seq=1;
+  bom.forEach(r=>{
+    const [tag,pn,desc,qty,type,mount,f]=r;
+    for(let q=0;q<qty;q++){
+      const fp=resolveFootprint({type,description:desc,pn});
+      model.devices.push({
+        id:"d"+(seq++), tag: qty>1?`${tag}${q+1}`:tag, pn, description:desc,
+        circuitType:normalizeCircuit(type)||fp.c, face:f, mount, railId:null,
+        geometry:{x:25,y:25,w:fp.w,h:fp.h,depth:fp.d,rotation:0},
+        dimsSource:"nominal", clearanceMm:8, nameplate:tag
+      });
+    }
+  });
+  selectedId=null; setFace("back");
+  autoArrange();  // auto-arrange does its own refreshAll
+  updateMeta();
+  flashToast("Sample loaded & auto-arranged.");
+}
+
+/* ===================== JSON IMPORT / EXPORT ===================== */
+function openJsonExport(){
+  $("jsonTitle").innerHTML='Export JSON <button class="x" data-close>×</button>';
+  $("jsonHelp").textContent="Arranged layout model — this is the input the downstream elevation/fab generator consumes.";
+  $("jsonText").value=JSON.stringify(model,null,2);
+  $("jsonLoad").style.display="none"; $("jsonErr").style.display="none";
+  openModal("jsonModal"); rebindClose();
+}
+function openJsonImport(){
+  $("jsonTitle").innerHTML='Import JSON <button class="x" data-close>×</button>';
+  $("jsonHelp").textContent="Paste a layout model JSON, then Load. Must include meta, and devices[].";
+  $("jsonText").value=""; $("jsonLoad").style.display="inline-block"; $("jsonErr").style.display="none";
+  openModal("jsonModal"); rebindClose();
+}
+function loadJsonModel(){
+  try{
+    const m=JSON.parse($("jsonText").value);
+    if(!m.meta||!Array.isArray(m.devices)) throw new Error("Missing meta or devices[].");
+    // normalize
+    m.rails=m.rails||[]; m.ducts=m.ducts||[];
+    m.meta.subpanel=m.meta.subpanel||{width:740,height:940};
+    m.meta.door=m.meta.door||{present:true,width:740,height:940};
+    m.devices.forEach(d=>{ d.geometry=d.geometry||{x:0,y:0,w:45,h:90,depth:60,rotation:0};
+      d.geometry.rotation=d.geometry.rotation||0; d.face=d.face||"back"; d.mount=d.mount||"din";
+      d.circuitType=d.circuitType||"misc"; d.dimsSource=d.dimsSource||"nominal"; });
+    model=m; selectedId=null; closeModal("jsonModal"); setFace("back"); refreshAll();
+    flashToast("Model loaded ("+model.devices.length+" devices).");
+  }catch(err){ $("jsonErr").style.display="block"; $("jsonErr").textContent="Parse error: "+err.message; }
+}
+
+/* ===================== DOWNLOAD HELPERS ===================== */
+function download(filename, text, mime){
+  const blob=new Blob([text],{type:mime||"text/plain"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},500);
+}
+function fnameBase(){
+  const p=model.meta.panelId||"Panel", r=model.meta.rev||"X";
+  return `EC-${p}_Layout_Rev${r}`;
+}
+
+/* ===================== DRAWING PACKAGE EXPORT (self-contained HTML) ===================== */
+function exportDrawings(){
+  const html=buildDrawingHTML();
+  download(fnameBase()+"_Drawings.html", html, "text/html");
+  flashToast("Drawing package exported (2D + 3D + schedule).");
+}
+function svgElevation(f){
+  const env = f==="back"?model.meta.subpanel:model.meta.door;
+  const pad=70, sc=Math.min(700/env.width, 900/env.height);
+  const W=env.width*sc+pad*2, H=env.height*sc+pad*2;
+  const X=x=>pad+x*sc, Y=y=>pad+(env.height-y)*sc;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px" xmlns="http://www.w3.org/2000/svg" font-family="Arial">`;
+  s+=`<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`;
+  // envelope
+  s+=`<rect x="${X(0)}" y="${Y(env.height)}" width="${env.width*sc}" height="${env.height*sc}" fill="#fbfbf9" stroke="#1A1A1A" stroke-width="1.5"/>`;
+  // ducts
+  model.ducts.filter(z=>z.face===f).forEach(z=>{
+    s+=`<rect x="${X(z.x)}" y="${Y(z.y+z.h)}" width="${z.w*sc}" height="${z.h*sc}" fill="#F4C20D22" stroke="#C79A00" stroke-dasharray="5 3"/>`;
+    s+=`<text x="${X(z.x)+3}" y="${Y(z.y+z.h)+12}" font-size="9" fill="#8a6d00" font-family="Courier New">DUCT ${z.id}</text>`;
+  });
+  // rails
+  model.rails.filter(r=>r.face===f).forEach(r=>{
+    if(r.orientation==="vertical")
+      s+=`<line x1="${X(r.x)}" y1="${Y(r.y)}" x2="${X(r.x)}" y2="${Y(r.y+r.length)}" stroke="#9aa0a6" stroke-dasharray="2 3"/>`;
+    else
+      s+=`<line x1="${X(r.x)}" y1="${Y(r.y)}" x2="${X(r.x+r.length)}" y2="${Y(r.y)}" stroke="#9aa0a6" stroke-dasharray="2 3"/>`;
+  });
+  // devices
+  model.devices.filter(d=>d.face===f).forEach(d=>{
+    const {w,h}=devEffWH(d),g=d.geometry,col=circuitColor(d.circuitType);
+    s+=`<rect x="${X(g.x)}" y="${Y(g.y+h)}" width="${w*sc}" height="${h*sc}" fill="${col}22" stroke="${col}" stroke-width="1.2"/>`;
+    if(w*sc>24&&h*sc>12){
+      s+=`<text x="${X(g.x)+3}" y="${Y(g.y+h)+12}" font-size="10" font-weight="bold" fill="#1A1A1A">${escXml(d.tag||d.id)}</text>`;
+    }
+  });
+  // overall dims (red, referenced to datum)
+  const red='stroke="#C23B22" fill="#C23B22"';
+  s+=`<line x1="${X(0)}" y1="${Y(0)+30}" x2="${X(env.width)}" y2="${Y(0)+30}" ${red} stroke-width="1"/>`;
+  s+=`<text x="${X(env.width/2)}" y="${Y(0)+27}" font-size="11" fill="#C23B22" font-family="Courier New" text-anchor="middle">${env.width} mm</text>`;
+  s+=`<line x1="${X(0)-30}" y1="${Y(0)}" x2="${X(0)-30}" y2="${Y(env.height)}" ${red} stroke-width="1"/>`;
+  s+=`<text x="${X(0)-34}" y="${Y(env.height/2)}" font-size="11" fill="#C23B22" font-family="Courier New" text-anchor="middle" transform="rotate(-90 ${X(0)-34} ${Y(env.height/2)})">${env.height} mm</text>`;
+  // datum marker
+  s+=`<circle cx="${X(0)}" cy="${Y(0)}" r="4" fill="none" stroke="#C23B22"/><text x="${X(0)+6}" y="${Y(0)+14}" font-size="9" fill="#C23B22">0,0 datum</text>`;
+  s+=`</svg>`;
+  return s;
+}
+function scheduleRows(){
+  // aggregate by pn+tag for nameplate/BOM schedule
+  return model.devices.map((d,i)=>`<tr>
+    <td>${i+1}</td><td class="mono">${escXml(d.tag||d.id)}</td><td class="mono">${escXml(d.pn||"")}</td>
+    <td>${escXml(d.description||"")}</td><td>${escXml(d.circuitType)}</td><td>${escXml(d.face)}</td>
+    <td>${escXml(d.mount)}</td><td class="mono">${round(d.geometry.x)}, ${round(d.geometry.y)}</td>
+    <td class="mono">${round(devEffWH(d).w)}×${round(devEffWH(d).h)}</td></tr>`).join("");
+}
+function escXml(s){return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function buildDrawingHTML(){
+  const m=model.meta;
+  const model3dJSON=JSON.stringify(model);
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escXml(m.panelId||"Panel")} Layout Rev ${escXml(m.rev||"")} — Drawings</title>
+<style>
+:root{--green:#3AAA35;--ink:#1A1A1A;--caution:#F4C20D}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:#1A1A1A;background:#eceee9}
+header{background:#1A1A1A;color:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px}
+header .wm{font-weight:bold;font-size:18px}header .wm b{color:#3AAA35}
+header .t{font-size:13px;color:#cfcfcf}.sp{flex:1}
+header .meta{font-family:'Courier New',monospace;font-size:11px;color:#bbb;text-align:right}
+.wrap{max-width:1100px;margin:0 auto;padding:18px}
+.card{background:#fff;border:1px solid #d8d8d8;border-radius:8px;margin-bottom:18px;overflow:hidden}
+.card h2{margin:0;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:#6B6B6B;background:#E6F1DD;padding:9px 14px}
+.card .b{padding:16px;text-align:center}
+canvas{background:#dfe3dd;border-radius:6px;touch-action:none;max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{border:1px solid #e2e2e2;padding:5px 8px;text-align:left}
+th{background:#f4f5f3;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#6B6B6B}
+.mono{font-family:'Courier New',monospace}
+.legend{display:flex;flex-wrap:wrap;gap:12px;padding:10px 16px;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.note{font-size:11px;color:#8a6d00;background:#fdf6d8;border:1px solid #ece0a0;border-radius:6px;padding:8px 12px;margin:0 16px 14px}
+footer{background:#1A1A1A;color:#9a9a9a;font-family:'Courier New',monospace;font-size:10.5px;text-align:center;padding:8px}
+.hint{font-size:11px;color:#666;margin-top:6px}
+@media print{header,footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}.card{break-inside:avoid}}
+</style></head><body>
+<header><div class="wm">Va<b>Com</b></div>
+<div class="t">E&amp;C Panel Layout — Auto-generated Drawings</div><div class="sp"></div>
+<div class="meta">SO ${escXml(m.so||"—")} · PANEL ${escXml(m.panelId||"—")} · REV ${escXml(m.rev||"—")}<br>
+Enclosure ${escXml(m.enclosure.mfg||"")} ${escXml(m.enclosure.pn||"")} · ${escXml(m.enclosure.typeRating||"")}</div></header>
+<div class="wrap">
+<div class="note">⚠ Device dimensions are <b>nominal placeholders</b> (dimsSource:"nominal"), not catalog-verified. SCCR / OCPD / conductor sizing are NOT authored here — SUGGESTED, PE VERIFY.</div>
+
+<div class="card"><h2>2D Elevation — Back Subpanel</h2>
+<div class="legend">${legendHTML()}</div>
+<div class="b">${svgElevation("back")}</div></div>
+
+${model.meta.door.present?`<div class="card"><h2>2D Elevation — Door (inner face)</h2><div class="b">${svgElevation("door")}</div></div>`:""}
+
+<div class="card"><h2>3D View — Back Subpanel</h2>
+<div class="b"><canvas id="v3" width="900" height="620"></canvas>
+<div class="hint">drag = orbit · scroll = zoom</div></div></div>
+
+<div class="card"><h2>Device Schedule / Nameplate List</h2>
+<table><thead><tr><th>#</th><th>Tag</th><th>PN</th><th>Description</th><th>Circuit</th><th>Face</th><th>Mount</th><th>Pos x,y</th><th>W×H</th></tr></thead>
+<tbody>${scheduleRows()}</tbody></table></div>
+</div>
+<footer>INTERNAL USE ONLY // CONFIDENTIAL · VaCom Technologies (BITZER Group) · Generated by E&amp;C Panel Layout Editor Rev 4 · dims nominal</footer>
+<script>
+const MODEL=${model3dJSON};
+const CC=${JSON.stringify(CIRCUIT_COLORS)};
+function cc(t){return CC[(t||'misc').toLowerCase()]||CC.misc;}
+function effWH(d){var g=d.geometry,r=((g.rotation||0)%360+360)%360;return (r===90||r===270)?{w:g.h,h:g.w}:{w:g.w,h:g.h};}
+// standalone 3D renderer
+(function(){
+ var cv=document.getElementById('v3'),c=cv.getContext('2d');
+ var env=MODEL.meta.subpanel, dep=MODEL.meta.enclosure.depth;
+ var cam={yaw:-0.62,pitch:0.5,scale:1};
+ function render(){
+  var W=cv.width,H=cv.height;c.clearRect(0,0,W,H);c.fillStyle='#dfe3dd';c.fillRect(0,0,W,H);
+  var cyaw=Math.cos(cam.yaw),syaw=Math.sin(cam.yaw),cp=Math.cos(cam.pitch),sp=Math.sin(cam.pitch);
+  function proj(x,y,z){var X=x-env.width/2,Y=y-env.height/2,Z=z;var px=X*cyaw+Z*syaw;var pz=-X*syaw+Z*cyaw;var py=Y*cp-pz*sp;return{sx:px,sy:-py};}
+  var pts=[[0,0,0],[env.width,0,0],[0,env.height,0],[env.width,env.height,0],[0,0,-dep],[env.width,env.height,-dep]].map(function(p){return proj(p[0],p[1],p[2]);});
+  var mnX=1e9,mxX=-1e9,mnY=1e9,mxY=-1e9;pts.forEach(function(p){mnX=Math.min(mnX,p.sx);mxX=Math.max(mxX,p.sx);mnY=Math.min(mnY,p.sy);mxY=Math.max(mxY,p.sy);});
+  var sc=Math.min((W-90)/Math.max(mxX-mnX,1),(H-90)/Math.max(mxY-mnY,1));if(!cam.user)cam.scale=sc>0?sc:.5;
+  var cx=W/2,ccy=H/2;function T(p){return{x:cx+p.sx*cam.scale,y:ccy+p.sy*cam.scale};}
+  var faces=[];
+  function pushQuad(a,b,cc2,d,fill,stroke,z,label){faces.push({pts:[T(a),T(b),T(cc2),T(d)],z:z,fill:fill,stroke:stroke,label:label});}
+  pushQuad(proj(0,0,0),proj(env.width,0,0),proj(env.width,env.height,0),proj(0,env.height,0),'#cfd4cc','#9aa0a6',1e6);
+  MODEL.rails.filter(function(r){return r.face==='back';}).forEach(function(r){
+    var rw=(r.orientation==='vertical')?10:r.length,rh=(r.orientation==='vertical')?r.length:10;
+    boxF(r.x,r.y,12,rw,rh,'#b8bdb4','#8f948b',pushQuad,proj);});
+  MODEL.devices.filter(function(d){return d.face==='back';}).forEach(function(d){
+    var wh=effWH(d);boxF(d.geometry.x,d.geometry.y,d.geometry.depth||60,wh.w,wh.h,cc(d.circuitType),'#1A1A1A',pushQuad,proj,d.tag);});
+  faces.sort(function(a,b){return b.z-a.z;});
+  faces.forEach(function(f){c.beginPath();c.moveTo(f.pts[0].x,f.pts[0].y);for(var i=1;i<f.pts.length;i++)c.lineTo(f.pts[i].x,f.pts[i].y);c.closePath();c.fillStyle=f.fill;c.fill();c.lineWidth=1;c.strokeStyle=f.stroke;c.stroke();
+   if(f.label){var lx=(f.pts[0].x+f.pts[2].x)/2,ly=(f.pts[0].y+f.pts[2].y)/2;c.fillStyle='#fff';c.font='bold 10px Arial';c.textAlign='center';c.fillText(f.label,lx,ly+3);c.textAlign='left';}});
+ }
+ function boxF(x,y,depth,w,h,fill,stroke,push,proj,label){
+  var z1=depth;var p=function(X,Y,Z){return proj(X,Y,Z);};
+  var A=p(x,y,0),B=p(x+w,y,0),C=p(x+w,y+h,0),D=p(x,y+h,0),A2=p(x,y,z1),B2=p(x+w,y,z1),C2=p(x+w,y+h,z1),D2=p(x,y+h,z1);
+  var zk=-z1;
+  push(A,B,B2,A2,sh(fill,.82),stroke,zk+3);push(A,D,D2,A2,sh(fill,.72),stroke,zk+2);
+  push(B,C,C2,B2,sh(fill,.72),stroke,zk+2);push(D,C,C2,D2,sh(fill,.90),stroke,zk+1);
+  push(A2,B2,C2,D2,sh(fill,1),stroke,zk-1,label);
+ }
+ function sh(hex,f){var n=parseInt(hex.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;r=Math.round(r*f+(1-f)*80);g=Math.round(g*f);b=Math.round(b*f);return 'rgb('+Math.min(255,r)+','+g+','+b+')';}
+ var dragS=null;
+ cv.addEventListener('pointerdown',function(e){dragS={x:e.clientX,y:e.clientY,yaw:cam.yaw,pitch:cam.pitch};cv.setPointerCapture(e.pointerId);});
+ cv.addEventListener('pointermove',function(e){if(!dragS)return;cam.yaw=dragS.yaw+(e.clientX-dragS.x)*.01;cam.pitch=Math.max(-1.4,Math.min(1.4,dragS.pitch+(e.clientY-dragS.y)*.008));render();});
+ cv.addEventListener('pointerup',function(e){dragS=null;});
+ cv.addEventListener('wheel',function(e){e.preventDefault();cam.user=true;cam.scale*=(e.deltaY<0?1.1:.9);render();},{passive:false});
+ render();
+})();
+<\/script>
+</body></html>`;
+}
+function legendHTML(){
+  return Object.keys(CIRCUIT_COLORS).map(k=>`<span><i style="background:${CIRCUIT_COLORS[k]}"></i>${k}</span>`).join("");
+}
+
+/* ===================== MODALS ===================== */
+function openModal(id){ $(id).classList.add("on"); }
+function closeModal(id){ $(id).classList.remove("on"); }
+function rebindClose(){
+  document.querySelectorAll("[data-close]").forEach(el=>{
+    el.onclick=()=>{ el.closest(".modal-bg").classList.remove("on"); };
+  });
+}
+
+/* ===================== BOM MODAL WIRING ===================== */
+let bomMap=null;
+function openBom(){
+  $("bomText").value=""; $("mapWrap").style.display="none"; $("bomApply").disabled=true;
+  $("bomErr").style.display="none"; openModal("bomModal"); rebindClose();
+}
+$("bomFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader(); r.onload=()=>{ $("bomText").value=r.result; }; r.readAsText(f);
+});
+$("bomParse").onclick=()=>{
+  try{
+    bomMap=parseBOM($("bomText").value);
+    if(bomRows.length===0) throw new Error("No data rows below the header.");
+    renderMapUI();
+    $("mapWrap").style.display="block"; $("bomApply").disabled=false; $("bomErr").style.display="none";
+  }catch(err){ $("bomErr").style.display="block"; $("bomErr").textContent=err.message; $("bomApply").disabled=true; }
+};
+function renderMapUI(){
+  const fields=[["tag","Tag"],["pn","PN"],["description","Description"],["qty","Qty"],["type","Circuit type"],["mount","Mount"],["face","Face"]];
+  const opts=`<option value="-1">— none —</option>`+bomHeaders.map((h,i)=>`<option value="${i}">${escXml(h)}</option>`).join("");
+  $("mapRows").innerHTML=fields.map(([f,lab])=>`
+    <div><label>${lab}</label><select data-field="${f}">${opts}</select></div>`).join("");
+  $("mapRows").querySelectorAll("select").forEach(sel=>{
+    sel.value=String(bomMap[sel.dataset.field]);
+    sel.onchange=()=>{ bomMap[sel.dataset.field]=parseInt(sel.value,10); updateMapSummary(); };
+  });
+  updateMapSummary();
+}
+function updateMapSummary(){
+  let qtyTotal=0;
+  bomRows.forEach(cols=>{ const q=bomMap.qty>=0?parseInt(cols[bomMap.qty],10):1; qtyTotal+=(q&&q>0?q:1); });
+  $("mapSummary").textContent=`${bomRows.length} BOM line(s) → ${qtyTotal} device instance(s) will be created.`;
+}
+$("bomApply").onclick=()=>{
+  const devs=buildDevicesFromBOM(bomMap);
+  if(devs.length===0){ $("bomErr").style.display="block"; $("bomErr").textContent="No devices could be built — check the PN/Description mapping."; return; }
+  // fresh model but keep meta if user had one; if empty, seed default enclosure
+  if(model.devices.length===0 && !model.meta.panelId){
+    model.meta.panelId="CP-01"; model.meta.rev="A";
+  }
+  model.devices=devs; model.rails=[]; // rebuild rails for the new set
+  closeModal("bomModal");
+  setFace("back");
+  autoArrange();
+  flashToast(devs.length+" device(s) imported from BOM.");
+};
+
+/* ===================== BUTTON WIRING ===================== */
+$("btnBom").onclick=openBom;
+$("btnAuto").onclick=autoArrange;
+$("btnSample").onclick=loadSample;
+$("btnImport").onclick=openJsonImport;
+$("btnExport").onclick=openJsonExport;
+$("btnDraw").onclick=exportDrawings;
+$("btnAdd").onclick=addDevice;
+$("btnRotate").onclick=rotateSel;
+$("btnDelete").onclick=deleteSel;
+$("btnFit").onclick=()=>{ if(view==="2d"){computeFit();} else {cam.userScaled=false;} redraw(); };
+$("jsonCopy").onclick=()=>{ const t=$("jsonText"); t.select();
+  try{ navigator.clipboard.writeText(t.value); flashToast("Copied."); }catch(_){ document.execCommand("copy"); } };
+$("jsonLoad").onclick=loadJsonModel;
+document.querySelectorAll("#viewSeg button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+document.querySelectorAll("#faceSeg button").forEach(b=>b.onclick=()=>setFace(b.dataset.face));
+// keyboard nudge
+window.addEventListener("keydown",e=>{
+  const d=getSelected(); if(!d||view!=="2d")return;
+  const step=e.shiftKey?GRID:1; let used=true;
+  if(e.key==="ArrowLeft")d.geometry.x-=step;
+  else if(e.key==="ArrowRight")d.geometry.x+=step;
+  else if(e.key==="ArrowUp")d.geometry.y+=step;
+  else if(e.key==="ArrowDown")d.geometry.y-=step;
+  else if(e.key==="r"||e.key==="R")rotateSel();
+  else if(e.key==="Delete"||e.key==="Backspace")deleteSel();
+  else used=false;
+  if(used){ e.preventDefault(); refreshStatus(); redraw(); renderInspector(); }
+});
+
+/* ===================== RESIZE / FIRST DRAW ===================== */
+const ro=new ResizeObserver(()=>{ if(view==="2d")computeFit(); redraw(); });
+ro.observe(wrap);
+window.addEventListener("resize",()=>{ if(view==="2d")computeFit(); redraw(); });
+// deferred first draw (canvas height guard)
+requestAnimationFrame(()=>{ computeFit(); loadSample(); redraw(); });
+</script>
+</body>
+</html>
