@@ -1504,11 +1504,24 @@ window.addEventListener("keydown",e=>{
 });
 
 /* ===================== RESIZE / FIRST DRAW ===================== */
-const ro=new ResizeObserver(()=>{ if(view==="2d"){ vt.W=wrap.clientWidth; vt.H=wrap.clientHeight; if(!vt.userSet) computeFit(); } redraw(); });
+function refit(){ if(view==="2d"){ vt.W=wrap.clientWidth; vt.H=wrap.clientHeight; if(!vt.userSet) computeFit(); } redraw(); }
+const ro=new ResizeObserver(refit);
 ro.observe(wrap);
-window.addEventListener("resize",()=>{ if(view==="2d"){ vt.W=wrap.clientWidth; vt.H=wrap.clientHeight; if(!vt.userSet) computeFit(); } redraw(); });
-// deferred first draw (canvas height guard)
-requestAnimationFrame(()=>{ computeFit(); loadSample(); redraw(); });
+window.addEventListener("resize",refit);
+window.addEventListener("orientationchange",()=>setTimeout(refit,200));
+// Redraw whenever the page (re)appears — the in-app browser / iOS webview often lays out
+// AFTER the initial frame, which previously left the canvas blank.
+window.addEventListener("load",refit);
+window.addEventListener("pageshow",refit);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refit(); });
+
+// Build the model now (size-independent), then keep retrying the first paint until the
+// canvas actually has a non-zero size (guards against 0-height first frame on mobile webviews).
+loadSample();
+(function firstDraw(n){
+  if(wrap.clientWidth>1 && wrap.clientHeight>1){ if(!vt.userSet) computeFit(); redraw(); return; }
+  if(n<180) requestAnimationFrame(()=>firstDraw(n+1));
+})(0);
 </script>
 </body>
 </html>
