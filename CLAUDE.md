@@ -16,7 +16,26 @@ Configurator (arrange) → this editor → arranged JSON → elevation/fab drawi
 ACADE schematic assembly → ACADE final BOM. Only the editor is in scope here. The arranged JSON
 this app exports is the input the downstream elevation generator will consume.
 
-## Current state — Rev 6
+## Current state — Rev 7
+Rev 7 builds on Rev 6 (same iPhone-reliable skeleton) and adds:
+- **Realistic component blocks**: `deviceKind()` maps each device to a symbol family (vfd,
+  disconnect, handle, transformer, fan, relay, fuse, terminal, recp, thermostat, ct, io, ground…);
+  `SYMBOLS[kind]` returns detail primitives in a unit square, rendered by TWO tiny renderers —
+  `drawSymCanvas` (editor) and `symSVG` (static export) — so the same realistic depiction appears
+  in the canvas editor AND the no-JS SVG drawings.
+- **Layout follows the fab drawing + the owner's intent**: BACK = power (600A disconnect TOP-RIGHT,
+  PowerFlex VFD MID/BOTTOM-LEFT, CT, ground); SIDE = transformer (bottom) + control I/O on DIN rails
+  (relays, fuses, GFCI, thermostat, RTD, terminal/IO strips); ENCLOSURE front (the "door" face,
+  envelope = enclosure outer) = disconnect handle TOP-RIGHT + 2 filter fans + rating plate.
+- **Static Drawings (phone) button** — one click exports a pure-SVG, no-JavaScript drawing package
+  (`buildStaticDrawingHTML`): back/side/enclosure elevations with the realistic symbols, a static
+  isometric 3D (SVG polygons), and the device schedule. THIS is the file to view on a phone; the
+  interactive editor needs a real browser (the in-app iPhone viewer does not run JS).
+- `ensureRails` no longer adds back rails when the back has no un-pinned DIN gear (power-only back).
+
+The 3D view auto-generates from the single model on every 2D edit (2D is the source of truth).
+
+## Prior state — Rev 6
 Rev 6 = Rev 5's full feature set rebuilt on the **Rev 3 rendering skeleton**, because Rev 5's
 flex-fill canvas went blank in the iPhone in-app browser. Everything in the Rev 5 list below still
 holds (BOM import, catalog lookup, auto-arrange, Back/Door/Side faces, keep-out guard, 3D, drawings
@@ -116,7 +135,8 @@ Configurator, field names must be aligned to that app's real export.
 5. Header shield logo drop-in once the asset is provided.
 
 ## Files expected in this project
-- EC-PanelLayout_Editor_Rev6.html — current app (start here; iPhone-reliable rendering skeleton).
+- EC-PanelLayout_Editor_Rev7.html — current app (start here; realistic blocks + power/side/enclosure layout).
+- EC-PanelLayout_Editor_Rev6.html — prior rev (kept; iPhone-reliable rendering skeleton).
 - EC-PanelLayout_Editor_Rev5.html — prior rev (kept; feature-complete but blanked on iOS webview).
 - EC-PanelLayout_Editor_Rev4.html — prior rev (kept; rev discipline — never overwrite).
 - (Rev 3 / earlier revs and the JSON-schema / workflow-plan reference docs are not yet in this repo.)
