@@ -16,7 +16,15 @@ Configurator (arrange) → this editor → arranged JSON → elevation/fab drawi
 ACADE schematic assembly → ACADE final BOM. Only the editor is in scope here. The arranged JSON
 this app exports is the input the downstream elevation generator will consume.
 
-## Current state — Rev 5
+## Current state — Rev 6
+Rev 6 = Rev 5's full feature set rebuilt on the **Rev 3 rendering skeleton**, because Rev 5's
+flex-fill canvas went blank in the iPhone in-app browser. Everything in the Rev 5 list below still
+holds (BOM import, catalog lookup, auto-arrange, Back/Door/Side faces, keep-out guard, 3D, drawings
+export, rCMP-1-1-1 sample); the only change is the shell/rendering approach (see pitfalls). Layout:
+2D editor left, a persistent 3D view + inspector in a right sidebar (stacks below on mobile), plus
+on-canvas 2D pinch/drag pan + zoom (+/-/FIT) for the tall panel on phones.
+
+## Prior state — Rev 5
 Working: **BOM import (CSV/TSV/Excel-paste or file) with auto column-mapping** (Tag/PN/Catalog/
 Description/Qty/Type/Mount/Face), **catalog footprint lookup by PN** (dimsSource flips to
 "catalog" on a hit; nominal keyword resolver is the fallback), **auto-arrange** (DIN devices packed
@@ -70,9 +78,12 @@ Configurator, field names must be aligned to that app's real export.
 - Set touch-action:none on both canvases or a drag scrolls the page instead.
 - Any overlay sitting on top of a canvas (hint bar, coord readout, labels) must be
   pointer-events:none or it swallows taps on components beneath it.
-- Canvas must have guaranteed height: flex-column body + min-height on the work area,
-  a ResizeObserver redraw, a deferred requestAnimationFrame first draw, and a zero-size
-  guard in the draw functions. Without this the canvas collapses to 0 and nothing renders.
+- Canvas must have guaranteed height. The RELIABLE recipe (proven on the iPhone in-app browser,
+  Rev 6): do NOT use `overflow:hidden` on body + flex-fill canvas — that collapsed to a blank
+  canvas on iOS (Rev 5). Instead let the page scroll naturally (no body overflow lock), give the
+  canvas-wrap a real `min-height` (e.g. 560px desktop / 62vh mobile), size the canvas from
+  `getBoundingClientRect()*devicePixelRatio` (CSS width/height:100%), redraw via ResizeObserver +
+  a double `requestAnimationFrame` first paint, and keep a zero-size guard in the draw functions.
 - Scale canvas by devicePixelRatio for crisp lines.
 - 3D auto-fits scale unless the user has manually zoomed (cam.userScaled).
 
@@ -105,7 +116,8 @@ Configurator, field names must be aligned to that app's real export.
 5. Header shield logo drop-in once the asset is provided.
 
 ## Files expected in this project
-- EC-PanelLayout_Editor_Rev5.html — current app (start here).
+- EC-PanelLayout_Editor_Rev6.html — current app (start here; iPhone-reliable rendering skeleton).
+- EC-PanelLayout_Editor_Rev5.html — prior rev (kept; feature-complete but blanked on iOS webview).
 - EC-PanelLayout_Editor_Rev4.html — prior rev (kept; rev discipline — never overwrite).
 - (Rev 3 / earlier revs and the JSON-schema / workflow-plan reference docs are not yet in this repo.)
 
